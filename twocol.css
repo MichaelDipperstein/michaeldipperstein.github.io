@@ -1,0 +1,113 @@
+body
+{
+    color: #000000;
+    background: #CCCCCC;
+}
+
+a:link
+{
+    color: #0000CC;
+}
+
+a:visited
+{
+    color: #660066;
+}
+
+a:active
+{
+    color: #660066;
+}
+
+#header
+{
+    color: black;
+    position: relative;
+}
+
+#header h1, #header h2, #header h3, #header p
+{
+    text-align: center;
+}
+
+#container1
+{
+	float: left;
+	width: 100%;
+	position: relative;
+	right: 80%;
+	background: aqua;
+}
+
+#container2
+{
+	clear: left;
+	float: left;
+	width: 100%;
+	overflow: hidden;
+	background: #CCCCCC;
+}
+
+#main
+{
+	float: left;
+	width: 78%;
+	position: relative;
+	left: 83%;
+	overflow: hidden;
+}
+
+#api
+{
+}
+
+#api h4
+{
+	margin-bottom: 0em;
+}
+
+#api code
+{
+	font-family: monospace;
+	font-weight: bold;
+}
+
+#api .section
+{
+	margin-bottom: 0em;
+}
+
+#api .indent
+{
+	margin-top: 0em;
+	margin-left: 2em;
+}
+
+#navbar
+{
+	float: left;
+	width: 18%;
+	position: relative;
+	left: 81%;
+	overflow: hidden;
+}
+
+#navbar h1
+{
+    text-align: center;
+    font-size: medium;
+    font-weight: bold;
+}
+
+#navbar h2
+{
+    text-align: center;
+    font-size: medium;
+    font-weight: normal;
+}
+
+#navbar p
+{
+    font-size: small;
+}
+
