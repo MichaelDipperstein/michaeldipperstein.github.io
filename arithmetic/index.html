@@ -1,0 +1,907 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+<title>Arithmetic Code Discussion and Implementation</title>
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="quanta">
+<meta name="keywords" content="Arithmetic Code Compression Source">
+<link rel="stylesheet" href="../twocol.css" type="text/css">
+</head>
+
+<body>
+
+<div id="container2">
+<div id="container1">
+
+<div id="navbar">
+    <h1>Project Index</h1>
+    <hr style="width:90%;text-align: center;">
+
+    <p><a href="../index.html">Home</a></p>
+
+    <h2>Compression</h2>
+    <p><a href="./index.html">Arithmetic Coding</a><br>
+    <a href="../bwt/index.html">Burrows-Wheeler Transform</a><br>
+    <a href="../delta/index.html">Delta Coding</a><br>
+    <a href="../freq/index.html">Frequency Substitution</a><br>
+    <a href="../huffman/index.html">Huffman Coding</a><br>
+    <a href="../lzss/index.html">LZSS Coding</a><br>
+    <a href="../lzw/index.html">LZW Coding</a><br>
+    <a href="../rice/index.html">Rice (Golomb) Coding</a><br>
+    <a href="../rle/index.html">Run Length Encoding</a></p>
+
+    <h2>Misc. Programming</h2>
+    <p><a href="../projects.html">School Projects</a><br>
+    <a href="../mltp/index.html">Thesis Project</a><br>
+    <a href="../crypt/index.html">crypt(3) Source</a><br>
+    <a href="../hamming/index.html">Hamming Codes</a><br>
+    <a href="../bitarray/index.html">Bit Array Libraries</a><br>
+    <a href="../bitfile/index.html">Bit File Stream Libraries</a><br>
+    <a href="../sqrt/index.html">Square Root Approximation Library</a><br>
+    <a href="../sort/index.html">Sort Library</a><br>
+    <a href="../trim/index.html">Trailing Space Trimmer and Tab Remover</a><br>
+    <a href="../optlist/index.html">Command Line Option Parser</a><br>
+    <a href="../stopwatch/index.html">POSIX Stopwatch Library</a><br>
+    <a href="../keypress/index.html">POSIX Wait for Key Press</a><br>
+    <a href="../ezini/index.html">INI File Parser and Creator</a></p>
+
+    <hr style="width:90%;text-align: center;">
+
+    <h1>Obligatory Links</h1>
+    <a href="http://counter.li.org/">
+        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
+        width="125" height="72">
+    </a><br>
+
+    <a href="http://validator.w3.org/check?uri=referer">
+        <img src="http://www.w3.org/Icons/valid-html401"
+        alt="Valid HTML 4.01 Strict" height="31" width="88">
+    </a>
+</div><!-- ends navbar-->
+
+<div id="main">
+    <div id="header">
+        <h1>Arithmetic Code Discussion and Implementation</h1>
+        <h3>by Michael Dipperstein</h3>
+    </div>
+
+    <hr style="width:100%;">
+
+    <p>The insanity continues.  After playing with
+    <a href="../huffman/index.html">Huffman</a> coding and
+    <a href="../lzss/index.html">LZSS</a>, I had to give arithmetic coding a
+    try.  It wasn't enough to understand how it worked I had to actually
+    implement it.
+    </p>
+
+    <p>I've read about what this stuff did to
+    <a href="http://www.ross.net/compression/">Ross Williams</a>.
+    I can only hope that I'm not going to be subjected to a similar fate.
+    </p>
+
+    <p>As with my other compression implementations, my intent is to publish
+    an easy to follow ANSI C implementation of the arithmetic coding
+    algorithm.  Anyone familiar with ANSI C and the arithmetic coding
+    algorithm should be able to follow and learn from my implementation.
+    There's a lot of room for improvement of compression ratios, speed, and
+    memory usage, but this project is about learning and sharing, not
+    perfection.</p>
+
+    <p>Recently (since 2008 or so) I've been using
+    <a href="http://www.python.org">Python</a> when I've needed quick hacks
+    to do something on a PC (vs an embedded system).  I eventually wrote a
+    <a href="../bitfile/index.html">bitfile library</a> for Python, then I
+    realized that I needed a to write some code that actually uses the
+    library, so now there's a Python implementation of the arithmetic coding
+    algorithm.</p>
+
+    <p>Click <a href="#download">here</a> for information on downloading my
+    source code.</p>
+
+    <p>The rest of this page discusses arithmetic coding and the results of
+    my efforts so far.</p>
+
+    <hr style="width:100%;">
+
+    <a name="overview"></a>
+    <h2>Algorithm Overview</h2>
+    <p>Arithmetic coding is similar to <a href="../huffman/index.html">
+    Huffman</a> coding; they both achieve their compression by reducing the
+    average number of bits required to represent a symbol.</p>
+
+    <p><strong>Given:</strong><br>
+    An alphabet with symbols S<sub>0</sub>, S<sub>1</sub>, ...
+    S<sub>n</sub>, where each symbol has a probability of occurrence of
+    p<sub>0</sub>, p<sub>1</sub>, ... p<sub>n</sub> such that &sum;p<sub>i</sub>
+    = 1.<br><br>
+
+    From the fundamental theorem of information theory, it can be shown that
+    the optimal coding for S<sub>i</sub> requires
+    (p<sub>i</sub>&times;log<sub>2</sub>(p<sub>i</sub>)) bits.</p>
+
+    <p>More often than not, the optimal number of bits is fractional.
+    Unlike Huffman coding, arithmetic coding provides the ability to
+    represent symbols with fractional bits.</p>
+
+    <p>Since, &sum;p<sub>i</sub> = 1, we can represent each probability,
+    p<sub>i</sub>, as a unique non-overlapping range of values between 0 and
+    1.  There's no magic in this, we're just creating ranges on a
+    probability line.</p>
+
+    <p>For example, suppose we have an alphabet 'a', 'b', 'c', 'd', and 'e'
+    with probabilities of occurrence of 30%, 15%, 25%, 10%, and 20%.  We can
+    choose the following range assignments to each symbol based on its
+    probability:</p>
+
+    <a name="table1"></a>
+    <table border="1" summary="Symbol Ranges">
+        <caption style="caption-side:bottom;">
+            TABLE 1.  Sample Symbol Ranges
+        </caption>
+        <tbody>
+            <tr style="font-weight: bold;">
+                <td>Symbol</td>
+                <td>Probability</td>
+                <td>Range</td>
+            </tr>
+            <tr>
+                <td>a</td>
+                <td>30%</td>
+                <td>[0.00, 0.30)</td>
+            </tr>
+            <tr>
+                <td>b</td>
+                <td>15%</td>
+                <td>[0.30, 0.45)</td>
+            </tr>
+            <tr>
+                <td>c</td>
+                <td>25%</td>
+                <td>[0.45, 0.70)</td>
+            </tr>
+            <tr>
+                <td>d</td>
+                <td>10%</td>
+                <td>[0.70, 0.80)</td>
+            </tr>
+            <tr>
+                <td>e</td>
+                <td>20%</td>
+                <td>[0.80, 1.00)</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>Where square brackets '[' and ']' mean the adjacent number is
+    included and parenthesis '(' and ')' mean the adjacent number is
+    excluded.</p>
+
+    <p>Ranges assignments like the ones in this table can then be use for
+    <a href="#encoding">encoding</a> and <a href="#decoding">decoding</a>
+    strings of symbols in the alphabet.  Algorithms using ranges for coding
+    are often referred to as range coders.</p>
+
+    <a name="encoding"></a>
+    <h3>Encoding Strings</h3>
+    <p>By assigning each symbol its own unique probability range, it's
+    possible to encode a single symbol by its range.  Using this approach,
+    we could encode a string as a series of probability ranges, but that
+    doesn't compress anything.  Instead additional symbols may be encoded by
+    restricting the current probability range by the range of a new symbol
+    being encoded.  The pseudo code below illustrates how additional symbols
+    may be added to an encoded string by restricting the string's range
+    bounds.</p>
+
+    <div style="padding-left: 2pc;">
+    <code>
+    lower&nbsp;bound = 0<br>
+    upper&nbsp;bound = 1<br><br>
+
+    while there are still symbols to encode<br>
+    </code>
+    </div>
+
+        <div style="padding-left: 4pc;">
+        <code>
+        current&nbsp;range = upper&nbsp;bound - lower&nbsp;bound<br>
+        upper&nbsp;bound = lower&nbsp;bound +
+            (current&nbsp;range &times;
+            upper&nbsp;bound&nbsp;of&nbsp;new&nbsp;symbol)<br>
+        lower&nbsp;bound = lower&nbsp;bound +
+            (current&nbsp;range &times;
+            lower&nbsp;bound&nbsp;of&nbsp;new&nbsp;symbol)<br>
+        </code>
+        </div>
+
+    <div style="padding-left: 2pc;">
+    <code>
+    end while
+    </code>
+    </div>
+
+    <p>Any value between the computed lower and upper probability bounds now
+    encodes the input string.</p>
+
+    <a name="example1"></a>
+    <p><strong>Example:</strong><br>
+    Encode the string &quot;ace&quot; using the probability ranges from
+    <a href="#table1">Table 1</a>.</p>
+
+    <p>
+    Start with lower and upper probability bounds of 0 and 1.<br>
+    <br>
+    Encode 'a'<br>
+    current range = 1 - 0 = 1<br>
+    upper bound = 0 + (1 &times; 0.3) = 0.3<br>
+    lower bound = 0 + (1 &times; 0.0) = 0.0<br>
+    <br>
+    Encode 'c'<br>
+    current range = 0.3 - 0.0 = 0.3<br>
+    upper bound = 0.0 + (0.3 &times; 0.70) = 0.210<br>
+    lower bound = 0.0 + (0.3 &times; 0.45) = 0.135<br>
+    <br>
+    Encode 'e'<br>
+    current range = 0.210 - 0.135 = 0.075<br>
+    upper bound = 0.135 + (0.075 &times; 1.00) = 0.210<br>
+    lower bound = 0.135 + (0.075 &times; 0.80) = 0.195<br>
+    <br>
+    The string &quot;ace&quot; may be encoded by <b>any</b> value within the
+    probability range [0.195, 0.210).</p>
+
+    <p>It should become apparent from the example that precision
+    requirements increase as additional symbols are encoded.  Strings of
+    unlimited length require infinite precision probability range bounds.
+    The section on <a href="#implementation">implementation</a> discusses
+    how the need for infinite precision is handled.</p>
+
+    <a name="decoding"></a>
+    <h3>Decoding Strings</h3>
+    <p>The decoding process must start with a an encoded value representing
+    a string.  By definition, the encoded value lies within the lower and
+    upper probability range bounds of the string it represents.  Since the
+    encoding process keeps restricting ranges (without shifting), the
+    initial value also falls within the range of the first encoded symbol.
+    Successive encoded symbols may be identified by removing the scaling
+    applied by the known symbol.  To do this, subtract out the lower
+    probability range bound of the known symbol, and multiply by the size of
+    the symbols' range.</p>
+
+    <p>Based on the discussion above, decoding a value may be performed
+    following the steps in the pseudo code below:</p>
+
+    <div style="padding-left: 2pc;">
+    <code>
+    encoded&nbsp;value = encoded&nbsp;input<br><br>
+
+    while string is not fully decoded<br>
+    </code>
+    </div>
+
+        <div style="padding-left: 4pc;">
+        <code>
+        identify the symbol containing encoded value within its range<br><br>
+
+        //remove effects of symbol from encoded value<br>
+        current&nbsp;range =
+            upper&nbsp;bound&nbsp;of&nbsp;new&nbsp;symbol -
+            lower&nbsp;bound&nbsp;of&nbsp;new&nbsp;symbol<br>
+        encoded&nbsp;value =
+            (encoded&nbsp;value - lower&nbsp;bound&nbsp;of&nbsp;new&nbsp;symbol)
+            &divide; current range<br>
+        </code>
+        </div>
+
+    <div style="padding-left: 2pc;">
+    <code>
+    end while
+    </code>
+    </div>
+
+    <a name="example2"></a>
+    <p><strong>Example:</strong><br>
+    Using the probability ranges from <a href="#table1">Table 1</a> decode
+    the three character string encoded as 0.20.</p>
+
+    <p>
+    Decode first symbol<br>
+    0.20 is within [0.00, 0.30)<br>
+    0.20 encodes 'a'<br>
+    <br>
+    Remove effects of 'a' from encode value<br>
+    current range = 0.30 - 0.00 = 0.30<br>
+    encoded value = (0.20 - 0.0) &divide; 0.30 = 0.67 (<em>rounded</em>)<br>
+    <br>
+    Decode second symbol<br>
+    0.67 is within [0.45, 0.70)<br>
+    0.67 encodes 'c'<br>
+    <br>
+    Remove effects of 'c' from encode value<br>
+    current range = 0.70 - 0.45 = 0.35<br>
+    encoded value = (0.67 - 0.45) &divide; 0.35 = 0.88<br>
+    <br>
+    Decode third symbol<br>
+    0.88 is within [0.80, 1.00)<br>
+    0.88 encodes 'e'<br>
+    <br>
+    The encoded string is &quot;ace&quot;.<br>
+    In case you were sleeping, this is the string that was encoded in the
+    encoding <a href="#example1">example</a>.</p>
+
+    <p>There are two issues I've glossed over with this example: knowing
+    when to stop, and the required computational precision.  The section on
+    <a href="#implementation">implementation</a> addresses both of these
+    issues.</p>
+
+    <a name="implementation"></a>
+    <h2>Implementation</h2>
+    <p>This section discusses some of the issues of implementing an
+    arithmetic encoder/decoder and the approach that I took to handle those
+    issues.  As I  have already stated, my implementation is intended to be
+    easy to develop and follow, not necessarily optimal.</p>
+
+    <h3>What is a Symbol</h3>
+    <p>One of the first questions that needs to be resolved before you start
+    is &quot;What is a symbol?&quot;.  For my implementation a symbol is any
+    8 bit combination as well as an End Of File (<strong>EOF</strong>) marker.
+    This means that there are 257 possible symbols in any encoded stream.</p>
+
+    <a name="infinite"></a>
+    <h3>Infinite Precision</h3>
+    <p>In my <a href="#overview">algorithm overview</a> I noted that the
+    lower and upper probability range bounds as well as the encoded value
+    theoretically require infinite precision values on the range [0, 1).
+    The method chosen to handle this largely impacts the rest of the
+    implementation.  Not wanting to blaze new trials, I chose to use the
+    common solution.  Values on the probability range scale will be
+    represented as infinite length fixed point values, with the binary point
+    before the most significant bit.</p>
+
+    <p><strong>Example:</strong><br>
+    .00000... = 0<br>
+    .10000... = 1/2<br>
+    .01000... = 1/4<br>
+    .11000... = 3/4<br>
+    .11111... = 1</p>
+
+    <h4>Wow Infinity.  That's a Lot of Bits.</h4>
+    <p>Fortunately for us, we don't need to operate on all the bits at once.
+    As additional symbols are encoded, the lower and upper range bounds
+    converge.  As the bounds converge, their most significant bits stop
+    changing.  By choosing the precision of each symbol's range bounds, we
+    can also limit the amount of bits required for each computation.</p>
+
+    <p>As you read through this section, you will learn how it is possible
+    to achieve good compression results using 16 bit computations.</p>
+
+    <a name="ranges"></a>
+    <h3>Computing Probability Ranges</h3>
+    <p>I've implemented both static and adaptive order-0 probability
+    <a href="#model">models</a>.  The my static model computes probability
+    ranges based on symbols counts obtained by making a pass on the input
+    prior to starting the encoding.  Others may use a predetermined set of
+    ranges.  My adaptive model assumes a uniform distribution and updates
+    itself as new symbols are processed.</p>
+
+    <p>For my static model, the first step to computing probability ranges
+    for each symbol is to simply count occurrences of each symbol, as well
+    as the total numbers of symbols.</p>
+
+    <p>The next step is to scale all of the symbol counts so that they can
+    be used in N bit computations.  To do this symbol counts must be scaled to
+    use no more than N - 2 bits.  In the case of 16 bit computations, counts
+    must be 14 bits or less.  You'll see why in the next section.</p>
+
+    <p>Use the following steps to scale the counts to be used with N bit
+    integer math:<br>
+
+    <strong>Step 1.</strong> Divide the total symbol count by
+    2<sup>(N - 2)</sup><br>
+
+    <strong>Step 2.</strong> Using integer division, divide each individual
+    symbol count by the ceiling of the result of Step 1.<br>
+
+    <strong>Step 3.</strong> If a non-zero count became zero, make it one.</p>
+
+    <p>Now we have a scaled count for each symbol.  We need to convert the
+    scaled counts to range bounds on a probability line.  For an alphabet
+    with symbols S<sub>0</sub>, S<sub>1</sub>, ... S<sub>n</sub> and scaled
+    counts c<sub>0</sub>, c<sub>1</sub>, ... c<sub>n</sub>, we can define
+    ranges as follows:</p>
+
+    <a name="table2"></a>
+    <table border="1" summary="Scaled Symbol Ranges">
+        <caption style="caption-side:bottom;">
+            TABLE 2.  Scaled Symbol Ranges
+        </caption>
+        <tbody>
+            <tr style="font-weight: bold;">
+                <td>Symbol</td>
+                <td>Range</td>
+            </tr>
+            <tr>
+                <td>S<sub>0</sub></td>
+                <td>[0, c<sub>0</sub>)</td>
+            </tr>
+            <tr>
+                <td>S<sub>1</sub></td>
+                <td>[upper range of S<sub>0</sub>,
+                upper range of S<sub>0</sub> + c<sub>1</sub>)</td>
+            </tr>
+            <tr>
+                <td>S<sub>2</sub></td>
+                <td>[upper range of S<sub>1</sub>,
+                upper range of S<sub>1</sub> + c<sub>2</sub>)</td>
+            </tr>
+            <tr style="font-weight: bold;text-align: center;">
+                <td>.<br>.<br>.</td>
+                <td>.<br>.<br>.</td>
+            </tr>
+            <tr>
+                <td>S<sub>n</sub></td>
+                <td>[upper range of S<sub>n - 1</sub>,
+                upper range of S<sub>n - 1</sub> + c<sub>n</sub>)</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>For my adaptive model we start with scaled symbols, but the N - 2 bit
+    restriction still applies.  It's possible to add the effect of a new
+    symbol that would make the symbol count too large to be represented by
+    N - 2 bits (see <a href="#adaptive">Adaptive Model and Symbol Range
+    Updates</a>). When this happens, I just rescale the current model for
+    half the symbol count.</p>
+
+    <p>Use the following steps to scale an adaptive model to be used with N bit
+    use integer math:<br>
+
+    <strong>Step 1.</strong> Determine the probability range for each symbol in
+    the model.<br>
+
+    <strong>Step 2.</strong> Halve each of the ranges from Step 1.<br>
+
+    <strong>Step 3.</strong> The new range for symbol S<sub>i</sub>
+    [upper bound of symbol S<sub>i - 1</sub>,
+    upper bound of symbol S<sub>i - 1</sub> + range from step 2).<br>
+
+    NOTE: The upper bound of symbol S<sub>-1</sub> = 0</p>
+
+    <a name="scaledencode"></a>
+    <h4>Encoding with Scaled Ranges</h4>
+    <p>The standard form of arithmetic coding's <a href="#encoding">encoding</a>
+    is based on fractional ranges on a probability line between 0 and 1.  We
+    just assigned our symbols probability ranges on a probability line
+    between 0 and &sum;c<sub>i</sub> (The total symbol count rescaled).  The
+    <a href="#encoding">encoding</a> algorithm needs to be adapted for our
+    new range scale.</p>
+
+    <p>The following pseudo code modifies the standard form of the encoding
+    algorithm for a range scale of [0, &sum;c<sub>i</sub>):</p>
+
+    <div style="padding-left: 2pc;">
+    <code>
+    lower&nbsp;bound = 0<br>
+    upper&nbsp;bound = &sum;c<sub>i</sub><br><br>
+
+    while there are still symbols to encode<br>
+    </code>
+    </div>
+
+        <div style="padding-left: 4pc;">
+        <code>
+        current&nbsp;range = upper&nbsp;bound - lower&nbsp;bound + 1<br>
+        upper&nbsp;bound = lower&nbsp;bound + ((current&nbsp;range &times;
+            upper&nbsp;bound&nbsp;of&nbsp;new&nbsp;symbol)
+            &divide; &sum;c<sub>i</sub>) - 1<br>
+        lower&nbsp;bound = lower&nbsp;bound + (current&nbsp;range &times;
+            lower&nbsp;bound&nbsp;of&nbsp;new&nbsp;symbol) &divide;
+            &sum;c<sub>i</sub><br>
+        </code>
+        </div>
+    <div style="padding-left: 2pc;">
+    <code>
+    end while
+    </code>
+    </div>
+
+    <p>There are a few important things to know about this algorithm:</p>
+    <ul>
+    <li>Notice that 1 is added to the computed current range.  This is because
+    the range is [<code>lower&nbsp;bound, upper&nbsp;bound</code>), including
+    all values up to <code>upper&nbsp;bound + 1</code>.
+    <li>The current range must be able to be stored in a value of N bits ((max
+    upper bound - min lower bound + 1) &lt 2<sup>N</sup>).
+    <li>Computing the new upper and lower bounds require that the multiplication
+    precede the division to avoid loss of precision.
+    <li>&sum;c<sub>i</sub> must be less than 2<sup>(N - 2)</sup> when using N
+    bits.  This keeps (current range &divide; &sum;c<sub>i</sub>) &ge; 2.  Which
+    in turn keeps the upper and lower bounds from crossing.
+    </ul>
+
+    <h4>Decoding with Scaled Ranges</h4>
+    <p>The standard form of arithmetic coding's <a href="#decoding">decoding</a>
+    is also based on fractional ranges on a probability line between 0 and 1.
+    Like <a href="#scaledencode">encoding</a>, we have to rescale our
+    calculations for the decoding process.</p>
+
+    <p>The following pseudo code modifies the standard form of the decoding
+    algorithm for a range scale of [0, &sum;c<sub>i</sub>):</p>
+
+    <div style="padding-left: 2pc;">
+    <code>
+    encoded&nbsp;value = encoded&nbsp;input<br>
+    lower&nbsp;bound = 0<br>
+    upper&nbsp;bound = &sum;c<sub>i</sub><br><br>
+
+    while string is not fully decoded<br>
+    </code>
+    </div>
+
+        <div style="padding-left: 4pc;">
+        <code>
+        // remove scaling<br>
+        current&nbsp;range = upper&nbsp;bound - lower&nbsp;bound + 1<br>
+        encoded&nbsp;value = (encoded&nbsp;value - lower&nbsp;bound) +
+            1;<br>
+        encoded&nbsp;value = (encoded&nbsp;value &times; &sum;c<sub>i</sub>)
+            &divide; current&nbsp;range<br>
+        </code>
+        </div>
+    <div style="padding-left: 2pc;">
+    <code>
+    end while
+    </code>
+    </div>
+
+    <a name="limiting"></a>
+    <h3>Limiting Computations to N Bits</h3>
+    <p>We have a way of representing floating point values as an
+    <a href="#infinite">infinite</a> stream of bits, we have a way of
+    <a href="#ranges">scaling</a> our probability ranges to N - 2 bits,
+    and we can encode and decode using the scaled values.  This still
+    doesn't get us to a finite number of bits.  There are a few facts that
+    we can use to develop a solution that limits computations to N bits:</p>
+
+    <ol>
+    <li>The lower bound starts as an infinite stream of bits set to 0.
+    <li>The upper bound starts as an infinite stream of bits set to 1.
+    <li>The upper and lower bounds become closer as more symbols are encoded.
+    <li>By restricting symbol probability ranges to N - 2 bits long,
+    we can avoid impacting the bits beyond the N<sup>th</sup> in any given
+    step.
+    </ol>
+
+    <p>As the lower and upper probability range bounds start to converge,
+    they are likely to reach a point where the have identical MSBs (most
+    significant bits).  Once the bounds have matching MSBs, the MSBs will
+    remain matching for the rest of the encoding process.  From that point
+    on we don't need to worry about the MSBs anymore.  Shift the MSB out to
+    the encoded data stream, and shift in a 0 and a 1 for the LSBs of the
+    lower and upper range limits respectively.  Since we didn't perform an
+    operation that affects bits beyond the N<sup>th</sup>, we know the LSBs
+    will be 0 and 1.</p>
+
+    <p><strong>Example:</strong><br>
+    Lower Range Bound = 1011010111001101<br>
+    Upper Range Bound = 1101001001001100<br><br>
+
+    Shift out the MSB (1) and write it to the encoded output<br><br>
+
+    Lower Range Bound = 011010111001101?<br>
+    Upper Range Bound = 101001001001100?<br><br>
+
+    Shift in the new LSB<br><br>
+
+    Lower Range Bound = 0110101110011010<br>
+    Upper Range Bound = 1010010010011001
+    </p>
+
+    <h4>Underflow</h4>
+    <p>Now that we have a rule for shifting bits through our N bit variables,
+    We can do everything with N bit math.  Well almost.  It turns out there's
+    one thing I overlooked.  What happens when the lower and upper range bounds
+    start to converge around 1/2 (0111.... and 1000...)?  This condition is
+    called an underflow condition.  When an underflow condition occurs the MSBs
+    of the range bounds will never match.</p>
+
+    <p>The good news is that there's a fairly simple way to handle underflow.
+    We can recognize that an underflow condition is pending when the two MSBs of
+    the lower range bound are different from the two MSBs of the upper range
+    bound.  What we have to do in this situation is to remove the second bit
+    from both range bounds, shift the other bits left, and remember that we had
+    an underflow condition.  We may still have an underflow condition so this
+    process may need to be repeated.  When we finally get an opportunity to
+    shift out the MSB, follow it with the underflow bit(s) of the opposite
+    value of the converged MSB.</p>
+
+    <p><strong>Example:</strong><br>
+    Lower Range Bound = 0111010111001101<br>
+    Upper Range Bound = 1011001001001100<br><br>
+
+    This is an underflow condition remove the second MSB and shift all the
+    bits over.<br><br>
+
+    Lower Range Bound = 0110101110011010<br>
+    Upper Range Bound = 1110010010011001<br><br>
+
+    Continue with encoding until MSBs match.<br><br>
+
+    Lower Range Bound = 1011010111001101<br>
+    Upper Range Bound = 1101001001001100<br><br>
+
+    Write out the MSB (1) and underflow bit (0), and shift in the new LSB.
+    <br><br>
+
+    Lower Range Bound = 0110101110011010<br>
+    Upper Range Bound = 1010010010011001
+    </p>
+
+    <h3>Stopping The Decoding Process</h3>
+    <p>In my decoding <a href="#example2">example</a> I stated that a three
+    symbol string should be decoded, but if you notice, there is still a coded
+    value when we're done.  We stopped decoding because the problem said to only
+    decode three symbols.</p>
+
+    <p>One of the methods for knowing when to stop the decoding process is to
+    include a symbol count somewhere in the encoded file.  The
+    <a href="#file_header">file header</a> is an ideal place to store the symbol
+    count.</p>
+
+    <p>Another approach is to implement a &quot;bijective&quot; coder.  The
+    idea of a &quot;bijective&quot; implementation seems like more a hassle
+    than a benefit.  If you're interested in learning about
+    &quot;bijective&quot; encoding/decoding refer to
+    <a href="http://bijective.dogma.net/">SCOTT's
+    &quot;one to one&quot; compression discussion</a>.</p>
+
+    <p>I took the approach of encoding an <strong>EOF</strong>.  The upside is
+    that I don't need to include a total symbol count in my header.  I don't
+    even need to count <strong>EOF</strong>s, because there's only one.  The
+    downsides are that the <strong>EOF</strong> does take up space in the
+    probability line, and encoding the <strong>EOF</strong> may also add extra
+    bits to the encoded file.</p>
+
+    <p>I performed a few tests comparing including a total symbol count in the
+    file header against encoding the <strong>EOF</strong>.  Encoding the
+    <strong>EOF</strong> appeared to result in the better average compression
+    ratios.  My testing was far from scientific.  If I get some time I will
+    actually do a mathematical analysis of the two methods to determine when
+    one method is better than the other.</p>
+
+    <h3>Stopping the Encoding Process</h3>
+    <p>Since I stop my encoding process after encoding the <strong>EOF</strong>
+    it is at that point that I know the final probability range bounds.
+    However, our probability range bounds have infinite precision and we need
+    to write enough bits to be sure that the value we output falls within the
+    range for the string we just encoded.  Since the decoder also uses N bits,
+    we just need to make sure it will have N bits to work with when it decodes
+    the <strong>EOF</strong>.  To do this, output the lower range bound's
+    second MSB, all remaining underflow bits, plus an additional underflow bit.
+    </p>
+
+    <a name="model"></a>
+    <h3>Static vs. Adaptive Models</h3>
+    <p>The arithmetic coding algorithm is well suited for both static and
+    adaptive probability models.  Encoders and decoders using adaptive
+    probability models start with a fixed model and use a set of rules to adjust
+    the model as symbols are encoded/decoded.  Encoders and decoders that use
+    static symbol probability models start with a model that doesn't change
+    during the encoding process.  Static probability models may be constant
+    regardless of what is being encoded or they may be generated based on the
+    encoded input.</p>
+
+    <a name="file_header"></a>
+    <h4>Static Model and File Headers</h4>
+    <p>My static probability model implementation uses a file header.  Symbol
+    probabilities are computed prior to the start of the encoding process and
+    they are stored in a file header for the decoder to use at the start of the
+    decoding process.</p>
+
+    <p>The file header is section of data prior to the encoded output that
+    includes <a href="#ranges">scaled range</a> counts for each encoded symbol
+    (except the <b>EOF</b> whose count is always one).  Since I've scaled my
+    counts to all be 14 bit values, I cheat a little and just write 14 bit
+    values to the encoded file.  Handling the 14 bit values is only slightly
+    more complicated than handling 16 bit values, and it makes the file 512
+    bits smaller.</p>
+
+    <a name="adaptive"></a>
+    <h4>Adaptive Model and Symbol Range Updates</h4>
+    <p>In the section on <a href="#ranges">Computing Probability Ranges</a> I
+    touched on the potential need to rescale adaptive probability ranges and how
+    I did it.  What I neglected to mention was why this happens and what it
+    means.</p>
+
+    <p>As its name would suggest, the adaptive model updates with the data
+    stream.  I chose to update my model after a symbol is encoded or decoded.
+    After a symbol is encoded or decoded, it's upper bound and the bounds of
+    every symbol after it must be incremented by one.  On average that will be
+    128 updates per an encode/decode in a 256 symbol alphabet.  Others have
+    tried to reduce the number of updates required by placing the more common
+    symbols near the end of the list of ranges.  Laziness and the my inability
+    to see a great performance benefit kept me from trying that approach.</p>
+
+    <p>If adding a new symbol causes the total probability to exceed N - 2 bits,
+    the probability ranges must be <a href="#ranges">rescaled</a>.  One side
+    effect of rescaling is that symbols encoded/decode after a rescale operation
+    will have twice the weight of symbols encoded prior to the rescale (the
+    weight of prior symbols is halved).  I have a feeling that this may be
+    beneficial more often than not, but it's not intended to be a feature of my
+    implementation.</p>
+
+    <hr style="width:100%;">
+
+    <h2>C Library Code Interface</h2>
+    <div id="api">
+        <h3>Encoding Data</h3>
+        <h4>ArEncodeFile</h4>
+        <p class="section">Declaration:</p>
+        <p class="indent">
+            <code>int ArEncodeFile(FILE *inFile, FILE *outFile,
+            const model_t model);</code>
+        </p>
+
+        <p class="section">Description:</p>
+        <p class="indent">
+            This routine generates a list of arithmetic code ranges for an
+            input file and then uses the ranges to write out an encoded version
+            of that file.
+        </p>
+
+        <p class="section">Parameters:</p>
+        <p class="indent">
+            <code>inFile</code>
+            - The file stream to be encoded.  It must be opened and it must also
+            be rewindable if a static model is used.  If NULL, stdin will be
+            used.<br>
+            <code>outFile</code>
+            - The file stream receiving the encoded results.  It must be opened
+            as binary.  If NULL, stdout will be used.<br>
+            <code>model</code>
+            - <code>model_t</code> type value indicating whether a static model
+            or a dynamic model is to be used.
+        </p>
+
+        <p class="section">Effects:</p>
+        <p class="indent">
+            <code>inFile</code> is arithmetically encoded and written to
+            <code>outFile</code>.  Neither file is closed after exit.
+        </p>
+
+        <p class="section">Returned:</p>
+        <p class="indent">
+            0 for success, non-zero for failure.  <code>errno</code> will be set
+            in the event of a failure.
+        </p>
+
+        <h3>Decoding Data</h3>
+        <h4>ArDecodeFile</h4>
+        <p class="section">Declaration:</p>
+        <p class="indent">
+            <code>int ArDecodeFile(FILE *inFile, FILE *outFile,
+            const model_t model);</code>
+        </p>
+
+        <p class="section">Description:</p>
+        <p class="indent">
+            This routine opens an arithmetically encoded file, reads it's
+            header, and builds a list of probability ranges which it then uses
+            to decode the rest of the file.
+        </p>
+
+        <p class="section">Parameters:</p>
+        <p class="indent">
+            <code>inFile</code>
+            - The file stream containing the encoded input.  It must be opened
+            as binary.  If NULL, stdin will be used.<br>
+            <code>outFile</code>
+            - The file stream receiving the decoded results.  It must be opened
+            as binary.  If NULL, stdout will be used.<br>
+            <code>model</code>
+            - <code>model_t</code> type value indicating whether a static model
+            or a dynamic model is to be used.
+        </p>
+
+        <p class="section">Effects:</p>
+        <p class="indent">
+            The arithmetically encoded file <code>inFile</code> is decoded and
+            the results are written to <code>outFile</code>.  Neither file is
+            closed after exit.
+        </p>
+
+        <p class="section">Returned:</p>
+        <p class="indent">
+            0 for success, non-zero for failure.  <code>errno</code> will be set
+            in the event of a failure.
+        </p>
+    </div> <!-- ends api -->
+    
+    <h3>Portability</h3>
+    <p>All of the C source code that I have provided is written in strict
+    ANSI C.  I would expect it to build correctly on any machine with an
+    ANSI C compiler.  I have tested the code compiled with gcc on several Linux
+    distributions as well as mingw on Windows XP.  (Un)fortunately I don't
+    have a modern Windows system to test.</p>
+
+    <p>There are some compile time options that offer minimal speed-up when
+    compiling code for a little endian target, but the little endian code is
+    disabled by default.</p>
+
+    <p>My C implementation assumes that long integers (<code>long</code>) are
+    bigger than short integers (<code>short</code>), if this is not the case
+    with your compiler, a compile time error should be issued.</p>
+
+    <p>The C implementation is also incapable of handling files with greater
+    than <code>ULONG_MAX</code> bytes to be encoded.  The program will issue an
+    error and gracefully terminate if the file being encoded is too large.
+    </p>
+
+    <p>The Python code was tested using Python 2.6 on Linux and Windows XP.
+    It's possible that minor tweaks will be required to get the code to run
+    properly using other versions of Python.</p>
+
+    <hr style="width:100%;">
+
+    <h2>Further Information</h2>
+    <p>I found <a href="http://www.arturocampos.com/ac_arithmetic.html">
+    Arturo Campos'</a> and
+    <a href="http://www.dogma.net/markn/articles/arith/part1.htm">
+    Mark Nelson's</a> articles on arithmetic codeing to be a huge help.
+    They provided most of the information that I used to implemenent the
+    algorithm.</p>
+
+    <p>An excellent paper on arithmetic coding was published by
+    <a href="http://www.sable.mcgill.ca/~ebodde/pubs/sable-tr-2007-5.pdf">
+    Eric Bodden, Malte Clasen, and Joachim Kneis</a> after my initial
+    publication of this web page.  It is recommended reading for anybody
+    interrested in arithmetic coding.</p>
+
+    <p><a href="http://blog.lazar.co.nz/">Lazar Sumar</a> also has some
+    interesting thoughts on arithmetic coding that he discusses on his blog.</p>
+    <hr style="width:100%;">
+
+    <a name="download"></a>
+    <h2>Actual Software</h2>
+    <p>I am releasing my implementations of the arithmetic coding algorithm
+    under the <a href="http://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
+    The source code repositories are available on
+    <a href="http://www.github.com">GitHub</a></p>
+
+
+https://github.com/michaeldipperstein/arcode
+
+    <table summary="GitHub Repositories">
+      <tr>
+        <th valign="top" align="left">C Version</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/arcode">
+            https://github.com/michaeldipperstein/arcode
+          </a>
+        </th>
+      </tr>
+
+      <tr>
+        <th valign="top" align="left">Python Version</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/arcode-py">
+            https://github.com/michaeldipperstein/arcode-py
+          </a>
+        </th>
+      </tr>
+    </table>
+
+    <p>If you have any further questions or comments, you may contact me by
+    e-mail.  My e-mail address is:
+    <a href="mailto:mdipper@alumni.engr.ucsb.edu">mdipper@alumni.engr.ucsb.edu</a></p>
+
+</div><!-- ends main-->
+
+</div><!--container1-->
+</div><!--container2-->
+
+<p><a href="../index.html">Home</a><br>
+Last updated on <em>November 23, 2014</em></p>
+
+</body>
+</html>
