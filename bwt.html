@@ -1,0 +1,1037 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+<title>Burrows-Wheeler Transform Discussion and Implementation</title>
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="quanta">
+<meta name="keywords" content="Burrows-Wheeler Transform">
+<meta name="keywords" content="Move-To-Front MTF">
+<link rel="stylesheet" href="./twocol.css" type="text/css">
+</head>
+
+<body>
+
+<div id="container2">
+<div id="container1">
+
+<div id="navbar">
+    <h1>Project Index</h1>
+    <hr style="width:90%;text-align: center;">
+
+    <p><a href="./index.html">Home</a></p>
+
+    <h2>Compression</h2>
+    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
+    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
+    <a href="./delta.html">Delta Coding</a><br>
+    <a href="./freq.html">Frequency Substitution</a><br>
+    <a href="./huffman.html">Huffman Coding</a><br>
+    <a href="./lzss.html">LZSS Coding</a><br>
+    <a href="./lzw.html">LZW Coding</a><br>
+    <a href="./rice.html">Rice (Golomb) Coding</a><br>
+    <a href="./rle.html">Run Length Encoding</a></p>
+
+    <h2>Misc. Programming</h2>
+    <p><a href="./projects.html">School Projects</a><br>
+    <a href="./mltp.html">Thesis Project</a><br>
+    <a href="./crypt.html">crypt(3) Source</a><br>
+    <a href="./hamming.html">Hamming Codes</a><br>
+    <a href="./bitarray.html">Bit Array Libraries</a><br>
+    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
+    <a href="./sqrt.html">Square Root Approximation Library</a><br>
+    <a href="./sort.html">Sort Library</a><br>
+    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
+    <a href="./optlist.html">Command Line Option Parser</a><br>
+    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
+    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
+    <a href="./ezini.html">INI File Parser and Creator</a></p>
+
+    <hr style="width:90%;text-align: center;">
+
+    <h1>Obligatory Links</h1>
+    <a href="http://counter.li.org/">
+        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
+        width="125" height="72">
+    </a><br>
+
+    <a href="http://validator.w3.org/check?uri=referer">
+        <img src="http://www.w3.org/Icons/valid-html401"
+        alt="Valid HTML 4.01 Strict" height="31" width="88">
+    </a>
+</div><!-- ends navbar-->
+
+<div id="main">
+    <div id="header">
+        <h1>Burrows-Wheeler Transform Discussion and Implementation</h1>
+        <h3>by Michael Dipperstein</h3>
+    </div>
+
+    <hr style="width:100%;">
+
+    <p>After playing with:
+    <a href="./huffman.html">Huffman</a> coding,
+    <a href="./lzss.html">LZSS</a>,
+    <a href="./arithmetic.html">arithmetic</a> coding, and
+    run length encoding (<a href="./rle.html">RLE</a>), you'd figure that
+    I'd have enough.  I thought so too.  I briefly diverted my attention from
+    compression with a venture into C++ implementations of my
+    <a href="./bitfile.html">bit file</a> and
+    <a href="./bitarray.html">bit array</a> libraries, but compression
+    curiosities came back to haunt me.  I had long known about
+    <a href="http://sources.redhat.com/bzip2">bzip2</a> and its better
+    compression ratios than gzip.  I even knew that the &quot;b&quot; is for
+    &quot;block&quot;, but I never really understood how it worked.  Where do
+    blocks come into play and how does that let me improve on my compression
+    ratios?</p>
+
+    <p>It turns out that the blocks are constructs of the Burrows-Wheeler
+    block-sorting transform (BWT).  This page discusses the Burrows-Wheeler
+    transform and the related Move-To-Front coding (MTF).  I have also provided
+    links to my implementation of BWT and MTF.</p>
+
+    <p>As with my compression implementations, my intent is to publish an
+    easy to follow ANSI C implementation of the Burrows-Wheeler transform.
+    Anyone familiar with ANSI C and BWT should be able to follow and learn from
+    my implementation.  There's a lot of room for improvement of speed, memory
+    usage, and block size optimizations, but this project is about learning and
+    sharing, not perfection.</p>
+
+    <p>If you just want my source code, click <a href="#download">here</a> for
+    information on downloading it.</p>
+
+    <p>The rest of this page discusses BWT, Move-To-Front coding and the results
+    of my efforts so far.</p>
+
+    <hr style="width:100%;">
+
+    <a name="overview"></a>
+    <h2>Algorithm Overview</h2>
+    <p>The Burrows-Wheeler transform (BWT) is not actually a compression
+    algorithm.  In fact BWT requires that a small amount of additional
+    information be stored with the transformed data so that the transformation
+    may be reversed.  This makes the transformed data larger than its original
+    form.</p>
+
+    <p>BWT is useful because it converts the data into a format that is
+    generally more compressible by <a href="./rle.html">
+    run length encoders</a> and
+    statistical encoders with order greater than 0.  By additionally applying
+    <a href="#mtf">move-to-front</a> coding, the data will be in a format which
+    is generally more compressible by even zero order statistical encoders such
+    as traditional implementations of
+    <a href="./huffman.html">Huffman</a>
+    coding or <a href="./arithmetic.html">arithmetic</a> coding.</p>
+
+    <h3>Transform</h3>
+    <p>The Burrows-Wheeler transform is applied on blocks of input data
+    (symbols).  It is usually the case that larger blocks result in greater
+    compressibility of the transformed data at the expense of time and system
+    resources.</p>
+
+    <p>One of the effects of BWT is to produce blocks of data with more and
+    longer runs (strings of identical symbols) than those found in the original
+    data.  The increasing the number of runs and their lengths tends to improve
+    a the compressibility of data.</p>
+
+    <p>The first step of BWT is to read in a block of N symbols C<sub>0</sub>
+    &hellip; C<sub>N-1</sub>.</p>
+
+    <p><strong>Example:</strong><br>
+    Read in the following block: <code>this is a test.</code></p>
+
+    <p>N = 15<br>
+    C<sub>0</sub> = 't'<br>
+    C<sub>1</sub> = 'h'<br>
+    &hellip;<br>
+    C<sub>13</sub> = 't'<br>
+    C<sub>14</sub> = '.'</p>
+
+    <p>The next step is to think of the block as a cyclic buffer.  N strings
+    (rotations) S<sub>0</sub> &hellip; S<sub>N-1</sub> may be constructed such
+    that:<br>
+    S<sub>0</sub> = C<sub>0</sub>, &hellip;, C<sub>N-1</sub><br>
+    S<sub>1</sub> = C<sub>1</sub>, &hellip;, C<sub>N-1</sub>, C<sub>0</sub><br>
+    S<sub>2</sub> = C<sub>2</sub>, &hellip;, C<sub>N-1</sub>, C<sub>0</sub>,
+        C<sub>1</sub><br>
+    &hellip;<br>
+    S<sub>N-1</sub> = C<sub>N-1</sub>, C<sub>0</sub>, &hellip;, C<sub>N-2</sub>
+    </p>
+
+    <p><strong>Example:</strong><br>
+    &quot;this is a test.&quot; yields the following rotations:</p>
+
+    <p style="padding-left: 2pc;"><code>
+        S<sub>0</sub>&nbsp;&nbsp;= &quot;this is a test.&quot;<br>
+        S<sub>1</sub>&nbsp;&nbsp;= &quot;his is a test.t&quot;<br>
+        S<sub>2</sub>&nbsp;&nbsp;= &quot;is is a test.th&quot;<br>
+        S<sub>3</sub>&nbsp;&nbsp;= &quot;s is a test.thi&quot;<br>
+        S<sub>4</sub>&nbsp;&nbsp;= &quot; is a test.this&quot;<br>
+        S<sub>5</sub>&nbsp;&nbsp;= &quot;is a test.this &quot;<br>
+        S<sub>6</sub>&nbsp;&nbsp;= &quot;s a test.this i&quot;<br>
+        S<sub>7</sub>&nbsp;&nbsp;= &quot; a test.this is&quot;<br>
+        S<sub>8</sub>&nbsp;&nbsp;= &quot;a test.this is &quot;<br>
+        S<sub>9</sub>&nbsp;&nbsp;= &quot; test.this is a&quot;<br>
+        S<sub>10</sub>&nbsp;= &quot;test.this is a &quot;<br>
+        S<sub>11</sub>&nbsp;= &quot;est.this is a t&quot;<br>
+        S<sub>12</sub>&nbsp;= &quot;st.this is a te&quot;<br>
+        S<sub>13</sub>&nbsp;= &quot;t.this is a tes&quot;<br>
+        S<sub>14</sub>&nbsp;= &quot;.this is a test&quot;<br>
+    </code></p>
+
+    <p>The third step of BWT is to lexicographically sort S<sub>0</sub>
+    &hellip; S<sub>N-1</sub>.</p>
+
+    <p><strong>Example:</strong><br>
+    &quot;this is a test.&quot; yields the following sorted rotations:</p>
+
+    <p style="padding-left: 2pc;"><code>
+        S<sub>7</sub>&nbsp;&nbsp;= &quot; a test.this is&quot;<br>
+        S<sub>4</sub>&nbsp;&nbsp;= &quot; is a test.this&quot;<br>
+        S<sub>9</sub>&nbsp;&nbsp;= &quot; test.this is a&quot;<br>
+        S<sub>14</sub>&nbsp;= &quot;.this is a test&quot;<br>
+        S<sub>8</sub>&nbsp;&nbsp;= &quot;a test.this is &quot;<br>
+        S<sub>11</sub>&nbsp;= &quot;est.this is a t&quot;<br>
+        S<sub>1</sub>&nbsp;&nbsp;= &quot;his is a test.t&quot;<br>
+        S<sub>5</sub>&nbsp;&nbsp;= &quot;is a test.this &quot;<br>
+        S<sub>2</sub>&nbsp;&nbsp;= &quot;is is a test.th&quot;<br>
+        S<sub>6</sub>&nbsp;&nbsp;= &quot;s a test.this i&quot;<br>
+        S<sub>3</sub>&nbsp;&nbsp;= &quot;s is a test.thi&quot;<br>
+        S<sub>12</sub>&nbsp;= &quot;st.this is a te&quot;<br>
+        S<sub>13</sub>&nbsp;= &quot;t.this is a tes&quot;<br>
+        S<sub>10</sub>&nbsp;= &quot;test.this is a &quot;<br>
+        S<sub>0</sub>&nbsp;&nbsp;= &quot;this is a test.&quot;<br>
+    </code></p>
+
+    <p>The final step in the transform is to output a string, <code>L</code>,
+    consisting of the last character in each of the rotations in their sorted
+    order along with <code>I</code>, the sorted row containing S<sub>0</sub>.
+    </p>
+
+    <p><strong>Example:</strong><br>
+    &quot;this is a test.&quot; yields the following output:</p>
+
+    <p style="padding-left: 2pc;"><code>
+        L = &quot;ssat tt hiies&nbsp;.&quot;, I = 14
+    </code></p>
+
+    <p>The input went from a block of 0 runs to a block of 3 runs of length 2
+    (not bad for 15 symbols).  This transformation works on data blocks where
+    there are symbols that are frequently preceded by the same symbol.  In
+    my example ' ' is twice preceded by 's'.</p>
+
+    <p>Believe it or not the string of last characters (<code>L</code>) along
+    with the row S<sub>0</sub> appears in after sorting (<code>I</code>) is
+    enough information to reconstruct the original block (S<sub>0</sub>).</p>
+
+    <h3>Reverse Transform</h3>
+    <p>Reversing BWT is a little more complicated than the initial transform.
+    The reversal process starts with a string <code>L</code> composed of last
+    characters of sorted rotations (S<sub>0</sub> &hellip; S<sub>N-1</sub>) and
+    <code>I</code>, the position of the contribution S<sub>0</sub> made to
+    <code>L</code>.  The reversal process must yield S<sub>0</sub>, the original
+    block.</p>
+
+    <p>The approach to reversing the transform wasn't the least bit obvious to
+    me.  If it's obvious to you, feel free to skip this section.</p>
+
+    <p>It turns out there are a few ways to reverse the transform.  The method
+    discussed here is the one that I ended up implementing.</p>
+
+    <p>If <code>L</code> is composed of the symbols V<sub>0</sub> &hellip;
+    V<sub>N-1</sub>, the transformed string may be parsed to determine the
+    following pieces of additional information:</p>
+
+    <ol>
+    <li>The number of symbols in the substring V<sub>0</sub> &hellip;
+    V<sub>i-1</sub> that are identical to V<sub>i</sub>.
+    <li>For each unique symbol, V<sub>i</sub>, in <code>L</code>, the number of
+    symbols that are lexicographically less than that symbol.
+    </ol>
+
+    <p><strong>Example:</strong><br>
+    <code>L = &quot;ssat tt hiies .&quot;</code> produces the following:</p>
+
+    <div style="padding-left: 2pc;">
+    <a name="table1"></a>
+    <table summary="Preceding Like Symbols" border="1">
+        <caption style="caption-side:bottom;">
+            TABLE 1.  Number of Preceding Symbols Matching Symbol in
+            Current Position.
+        </caption>
+        <tbody>
+            <tr style="font-weight: bold;">
+                <td style="padding-left: 0.5pc;padding-right: 0.5pc;">Position
+                </td>
+                <td style="padding-left: 0.5pc;padding-right: 0.5pc;">Symbol
+                </td>
+                <td style="padding-left: 0.5pc;padding-right: 0.5pc;">Number<br>
+                Matching</td>
+                <td style="padding-left: 0.5pc;padding-right: 0.5pc;">Position
+                </td>
+                <td style="padding-left: 0.5pc;padding-right: 0.5pc;">Symbol
+                </td>
+                <td style="padding-left: 0.5pc;padding-right: 0.5pc;">Number<br>
+                Matching</td>
+            </tr>
+                <tr>
+                <td>0</td>
+                <td>'s'</td>
+                <td>0</td>
+                <td>8</td>
+                <td>'h'</td>
+                <td>0</td>
+            </tr>
+            <tr>
+                <td>1</td>
+                <td>'s'</td>
+                <td>1</td>
+                <td>9</td>
+                <td>'i'</td>
+                <td>0</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>'a'</td>
+                <td>0</td>
+                <td>10</td>
+                <td>'i'</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>'t'</td>
+                <td>0</td>
+                <td>11</td>
+                <td>'e'</td>
+                <td>0</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>' '</td>
+                <td>0</td>
+                <td>12</td>
+                <td>'s'</td>
+                <td>2</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td>'t'</td>
+                <td>1</td>
+                <td>13</td>
+                <td>' '</td>
+                <td>2</td>
+            </tr>
+            <tr>
+                <td>6</td>
+                <td>'t'</td>
+                <td>2</td>
+                <td>14</td>
+                <td>'.'</td>
+                <td>0</td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td>' '</td>
+                <td>1</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <br>
+
+    <a name="table2"></a>
+    <table summary="Symbols Lexicographically Less Than" border="1">
+        <caption style="caption-side:bottom;">
+            TABLE 2.  Number of Symbols Lexicographically Less Than Current
+            Symbol
+        </caption>
+        <tbody>
+            <tr style="font-weight: bold;">
+                <td style="padding-left: 0.5pc;padding-right: 0.5pc;">Symbol
+                </td>
+                <td style="padding-left: 0.5pc;padding-right: 0.5pc;">Number
+                Less Than</td>
+            </tr>
+            <tr>
+                <td>' '</td>
+                <td>0</td>
+            </tr>
+            <tr>
+                <td>'.'</td>
+                <td>3</td>
+            </tr>
+            <tr>
+                <td>'a'</td>
+                <td>4</td>
+            </tr>
+            <tr>
+                <td>'e'</td>
+                <td>5</td>
+            </tr>
+            <tr>
+                <td>'h'</td>
+                <td>6</td>
+            </tr>
+            <tr>
+                <td>'i'</td>
+                <td>7</td>
+            </tr>
+            <tr>
+                <td>'s'</td>
+                <td>9</td>
+            </tr>
+            <tr>
+                <td>'t'</td>
+                <td>12</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <p>Now we have:</p>
+    <ol>
+        <li><code>L</code>, the string of last characters of rotations.
+        <li><code>I</code>, the position of the contribution that S<sub>0</sub>
+        made to <code>L</code>.
+        <li>The number of times the symbol V<sub>i</sub> appears in the
+        substring V<sub>0</sub> &hellip; V<sub>i-1</sub>.
+        <li>The number of times a symbol lexicographically less than a unique
+        symbol appears in <code>L</code>.
+    </ol>
+
+    <p>Amazingly this is all we need to reconstruct S<sub>0</sub>.</p>
+
+    <p>Remember our string S<sub>0</sub> = C<sub>0</sub> &hellip;
+    C<sub>N-1</sub>.  So C<sub>N-1</sub> is the contribution from S<sub>0</sub>,
+    and it's in position <code>I</code>. (From #2)</p>
+
+    <p>Now that we've found the last character in S<sub>0</sub>,
+    C<sub>N-1</sub>, we'll try to reconstruct the rest of S<sub>0</sub>
+    backwards.  (Trust me, there's a technique that will let us do that.)</p>
+
+    <p>That means we need to find the symbol C<sub>N-2</sub>.   C<sub>N-2</sub>
+    is the contribution from S<sub>N-1</sub>.  so where is contribution from
+    S<sub>N-1</sub> in <code>L</code>?</p>
+
+    <p>It just so happens that S<sub>N-1</sub> is the string that starts with
+    C<sub>N-1</sub> and we just found C<sub>N-1</sub>.  So we know how
+    S<sub>N-1</sub> starts, which can help us find out where it is in the
+    sort order.</p>
+
+    <p>The contributions from strings starting with symbols less than
+    C<sub>N-1</sub> will occur earlier in <code>L</code> than the contribution
+    from S<sub>N-1</sub>.  <code>L</code> may also contain contributions from
+    strings starting with symbols equal to C<sub>N-1</sub>.  Some of these
+    strings occur before S<sub>N-1</sub> and others after.</p>
+
+    <p>From #3, we know the number of symbols identical to C<sub>N-1</sub> that
+    occur in <code>L</code> before C<sub>N-1</sub>.  So we also know the number
+    of strings starting with identical symbols that made contributions before
+    S<sub>N-1</sub>.</p>
+
+    <p>From #4, we know how many symbols there are that are less than
+    C<sub>N-1</sub>.  So we also know the number of strings starting with lesser
+    symbols that made contributions before S<sub>N-1</sub>.</p>
+
+    <p>No other strings may contribute to <code>L</code> before S<sub>N-1</sub>,
+    therefore the contribution from S<sub>N-1</sub> occurs in the position
+    obtained by summing the values from #3 and #4.  As stated earlier the
+    contribution from S<sub>N-1</sub> is C<sub>N-2</sub>.</p>
+
+    <p>Use the same technique to find C<sub>N-3</sub>, C<sub>N-4</sub>,
+    &hellip;, C<sub>0</sub>.</p>
+
+    <p><strong>Example:</strong><br>
+    Using tables <a href="#table1">1</a> and <a href="#table2">2</a> reverse BWT
+    where <code>L = &quot;ssat tt hiies .&quot;</code> and <code>I</code> = 14.
+    </p>
+
+    <p style="padding-left: 2pc;">We start with:<br>
+    S<sub>0</sub> = <code>???????????????</code><br><br>
+
+    We're given that C<sub>14</sub> is V<sub>14</sub> = '.'.<br>
+    S<sub>0</sub> = <code>??????????????.</code><br><br>
+
+    Table 1 tells us that there are 0 other '.' before V<sub>14</sub> and Table 2
+    tells us that there are 3 characters &lt; '.', so C<sub>14</sub>
+    must be V<sub>0 + 3</sub> = V<sub>3</sub> = 't'.<br>
+    S<sub>0</sub> = <code>?????????????t.</code><br><br>
+
+    Table 1 tells us that there are 0 other 't' before V<sub>3</sub> and Table 2
+    tells us that there are 12 characters &lt; 't', so C<sub>13</sub>
+    must be V<sub>0 + 12</sub>  = V<sub>12</sub> = 's'.<br>
+    S<sub>0</sub> = <code>????????????st.</code><br><br>
+
+    Table 1 tells us that there are 2 other 's' before V<sub>12</sub> and Table 2
+    tells us that there are 9 characters &lt; 's', so C<sub>12</sub>
+    must be V<sub>9 + 2</sub>  = V<sub>11</sub> = 'e'.<br>
+    S<sub>0</sub> = <code>???????????est.</code><br><br>
+
+    Table 1 tells us that there are 0 other 'e' before V<sub>11</sub> and Table 2
+    tells us that there are 5 characters &lt; 'e', so C<sub>11</sub>
+    must be V<sub>0 + 5</sub>  = V<sub>5</sub> = 't'.<br>
+    S<sub>0</sub> = <code>??????????test.</code><br><br>
+
+    Table 1 tells us that there is 1 other 't' before V<sub>5</sub> and Table 2
+    tells us that there are 12 characters &lt; 't', so C<sub>10</sub>
+    must be V<sub>1 + 12</sub>  = V<sub>13</sub> = ' '.<br>
+    S<sub>0</sub> = <code>????????? test.</code><br><br>
+
+    Table 1 tells us that there is 2 other ' ' before V<sub>13</sub> and Table 2
+    tells us that there are 0 characters &lt; ' ', so C<sub>9</sub>
+    must be V<sub>2 + 0</sub>  = V<sub>2</sub> = 'a'.<br>
+    S<sub>0</sub> = <code>????????a test.</code><br><br>
+
+    &hellip;</p>
+
+    <p>The rest is left as an exercise to the student.  (I always loved that
+    statement)</p>
+
+    <a name="whatbwt"></a>
+    <h3>So What Do I Do with BWT?</h3>
+    <p>Now that you understand BWT, you can publish web pages about it.  Okay,
+    that's not what you're looking for.</p>
+
+    <p>As I stated <a href="#overview">earlier</a> BWT tends to transform blocks
+    of symbols into blocks with more runs.  This makes BWT useful for improving
+    compression of <a href="./rle.html">run length encoders</a>.  The
+    method for compression would be:</p>
+    <ol>
+    <li>Apply Burrows-Wheeler Transform on data to be encoded.
+    <li>Apply run length encoding on data to be encoded.
+    </ol>
+
+    <p>The method for decompression would be:</p>
+    <ol>
+    <li>Remove run length encoding on from the encoded data.
+    <li>Apply the reverse Burrows-Wheeler Transform on the encoded data.
+    </ol>
+
+    <p>Typically compression performed by run length encoders are far from
+    optimal.  Even after BWT, run length encoders don't perform as well as
+    statistical encoders.  BWT doesn't do anything to change the frequency
+    distribution of symbols, so BWT alone won't do anything to make data more
+    compressible by order zero statistical algorithms.  That's where
+    Move-To-Front Coding comes into play.</p>
+
+    <a name="mtf"></a>
+    <h3>Move-To-Front Coding</h3>
+    <p>Move-To-Front (MTF) coding is a technique that encodes streams of symbols
+    based on an adapting code.  Imagine that symbols are encoded by their
+    position in a list of every symbol in the alphabet.  Initially the list is
+    in a lexicographical (or some predetermined) order.  Once a symbol in a
+    stream is encoded, that symbol is moved from it's current position to the
+    front of the list and its former predecessors are moved one position back.
+    </p>
+
+    <p><strong>Example:</strong><br>
+    Given an alphabet of ' ','.','a','e','h','i','s','t' encode
+    &quot;ssat tt hiies .&quot;:</p>
+
+    <div style="padding-left: 2pc;">
+    <a name="table3"></a>
+    <table summary="MTF Coding Example" border="1">
+        <tbody>
+            <tr style="font-weight: bold; text-align: center;">
+                <td>Renaming Symbols</td>
+                <td>Symbol List</td>
+                <td>Encoded Symbols</td>
+            </tr>
+            <tr>
+                <td>ssat tt hiies .</td>
+                <td>' ','.','a','e','h','i','s','t'</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>sat tt hiies .</td>
+                <td>'s',' ','.','a','e','h','i','t'</td>
+                <td>6</td>
+            </tr>
+            <tr>
+                <td>at tt hiies .</td>
+                <td>'s',' ','.','a','e','h','i','t'</td>
+                <td>6,0</td>
+            </tr>
+            <tr>
+                <td>t tt hiies .</td>
+                <td>'a','s',' ','.','e','h','i','t'</td>
+                <td>6,0,3</td>
+            </tr>
+            <tr>
+                <td>&nbsp;tt hiies .</td>
+                <td>'t','a','s',' ','.','e','h','i'</td>
+                <td>6,0,3,7</td>
+            </tr>
+            <tr>
+                <td>tt hiies .</td>
+                <td>' ','t','a','s','.','e','h','i'</td>
+                <td>6,0,3,7,3</td>
+            </tr>
+            <tr>
+                <td>t hiies .</td>
+                <td>'t',' ','a','s','.','e','h','i'</td>
+                <td>6,0,3,7,3,1</td>
+            </tr>
+            <tr>
+                <td> hiies .</td>
+                <td>'t',' ','a','s','.','e','h','i'</td>
+                <td>6,0,3,7,3,1,0</td>
+            </tr>
+            <tr>
+                <td>hiies .</td>
+                <td>' ','t','a','s','.','e','h','i'</td>
+                <td>6,0,3,7,3,1,0,1</td>
+            </tr>
+            <tr>
+                <td>iies .</td>
+                <td>'h',' ','t','a','s','.','e','i'</td>
+                <td>6,0,3,7,3,1,0,1,6</td>
+            </tr>
+            <tr>
+                <td>ies .</td>
+                <td>'i','h',' ','t','a','s','.','e'</td>
+                <td>6,0,3,7,3,1,0,1,6,7</td>
+            </tr>
+            <tr>
+                <td>es .</td>
+                <td>'i','h',' ','t','a','s','.','e'</td>
+                <td>6,0,3,7,3,1,0,1,6,7,0</td>
+            </tr>
+            <tr>
+                <td>s .</td>
+                <td>'e','i','h',' ','t','a','s','.'</td>
+                <td>6,0,3,7,3,1,0,1,6,7,0,7</td>
+            </tr>
+            <tr>
+                <td>&nbsp;.</td>
+                <td>'s','e','i','h',' ','t','a','.'</td>
+                <td>6,0,3,7,3,1,0,1,6,7,0,7,6</td>
+            </tr>
+            <tr>
+                <td>.</td>
+                <td>' ','s','e','i','h','t','a','.'</td>
+                <td>6,0,3,7,3,1,0,1,6,7,0,7,6,4</td>
+            </tr>
+            <tr>
+                <td></td>
+                <td>'.',' ','s','e','i','h','t','a'</td>
+                <td>6,0,3,7,3,1,0,1,6,7,0,7,6,4,7</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <p>Notice that with MTF coding, the second and successive characters in any
+    run are converted to 0 (&quot;ss&quot; became 6,0, &quot;tt&quot; became
+    1,0, and &quot;ii&quot; became 7,0).  This works well with BWT, since it
+    produces blocks with a lot of runs.  You should also notice that there is
+    nothing about MTF coding that requires prior use of BWT.</p>
+
+    <h3>Move-To-Front Decoding</h3>
+    <p>Unlike the reverse BWT, Move-To-Front (MTF) decoding was fairly obvious
+    to me.  It's very much like the encoding process, but a little less time
+    intensive.  This time the position of a symbol in the list of every symbol
+    in the alphabet is used to decode a symbol.  Like the encode process,
+    the list starts out in a lexicographical (or some predetermined) order.
+    The encoded data indicates the position of the decoded symbol.  After
+    decoding the symbol, move it to the front of the list.</p>
+
+    <p><strong>Example:</strong><br>
+    Given an alphabet of ' ','.','a','e','h','i','s','t' decode
+    decode 6,0,3,7,3,1,0,1,6,7,0,7,6,4,7:</p>
+
+    <div style="padding-left: 2pc;">
+    <a name="table4"></a>
+    <table summary="MTF Coding Example" border="1">
+        <tbody>
+            <tr style="font-weight: bold; text-align: center;">
+                <td>Renaming Symbols</td>
+                <td>Symbol List</td>
+                <td>Decoded Symbols</td>
+            </tr>
+            <tr>
+                <td>6,0,3,7,3,1,0,1,6,7,0,7,6,4,7</td>
+                <td>' ','.','a','e','h','i','s','t'</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>0,3,7,3,1,0,1,6,7,0,7,6,4,7</td>
+                <td>'s',' ','.','a','e','h','i','t'</td>
+                <td>s</td>
+            </tr>
+            <tr>
+                <td>3,7,3,1,0,1,6,7,0,7,6,4,7</td>
+                <td>'s',' ','.','a','e','h','i','t'</td>
+                <td>ss</td>
+            </tr>
+            <tr>
+                <td>7,3,1,0,1,6,7,0,7,6,4,7</td>
+                <td>'a','s',' ','.','e','h','i','t'</td>
+                <td>ssa</td>
+            </tr>
+            <tr>
+                <td>3,1,0,1,6,7,0,7,6,4,7</td>
+                <td>'t','a','s',' ','.','e','h','i'</td>
+                <td>ssat</td>
+            </tr>
+            <tr>
+                <td>1,0,1,6,7,0,7,6,4,7</td>
+                <td>' ','t','a','s','.','e','h','i'</td>
+                <td>ssat_</td>
+            </tr>
+            <tr>
+                <td>0,1,6,7,0,7,6,4,7</td>
+                <td>'t',' ','a','s','.','e','h','i'</td>
+                <td>ssat t</td>
+            </tr>
+            <tr>
+                <td>1,6,7,0,7,6,4,7</td>
+                <td>'t',' ','a','s','.','e','h','i'</td>
+                <td>ssat tt</td>
+            </tr>
+            <tr>
+                <td>6,7,0,7,6,4,7</td>
+                <td>' ','t','a','s','.','e','h','i'</td>
+                <td>ssat tt_</td>
+            </tr>
+            <tr>
+                <td>7,0,7,6,4,7</td>
+                <td>'h',' ','t','a','s','.','e','i'</td>
+                <td>ssat tt h</td>
+            </tr>
+            <tr>
+                <td>7,0,7,6,4,7</td>
+                <td>'h',' ','t','a','s','.','e','i'</td>
+                <td>ssat tt h</td>
+            </tr>
+            <tr>
+                <td>0,7,6,4,7</td>
+                <td>'i','h',' ','t','a','s','.','e'</td>
+                <td>ssat tt hi</td>
+            </tr>
+            <tr>
+                <td>7,6,4,7</td>
+                <td>'i','h',' ','t','a','s','.','e'</td>
+                <td>ssat tt hii</td>
+            </tr>
+            <tr>
+                <td>6,4,7</td>
+                <td>'e','i','h',' ','t','a','s','.'</td>
+                <td>ssat tt hiie</td>
+            </tr>
+            <tr>
+                <td>4,7</td>
+                <td>'s','e','i','h',' ','t','a','.'</td>
+                <td>ssat tt hiies</td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td>' ','s','e','i','h','t','a','.'</td>
+                <td>ssat tt hiies_</td>
+            </tr>
+            <tr>
+                <td></td>
+                <td>'.',' ','s','e','i','h','t','a'</td>
+                <td>ssat tt hiies .</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <a name="whatmtf"></a>
+    <h3>So What Do I Do with MTF?</h3>
+    <p>Now that you understand MTF, you can publish web pages about it too.
+    Okay, it was a bad joke the first time.</p>
+
+    <p>As I stated <a href="#whatbwt">earlier</a> MTF tends to increase the
+    frequency of low value symbols within a block.  This makes MTF useful for
+    improving compression of statistical encoders such as
+    <a href="./huffman.html">Huffman</a> coding or
+    <a href="./arithmetic.html">arithmetic</a> coding.</p>
+
+    <p>The method for compression would be:</p>
+    <ol>
+    <li>Apply Burrows-Wheeler Transform on data to be encoded.
+    <li>Apply Move-To-Front encoding on data to be encoded.
+    <li>Apply statistical encoding on data to be encoded.
+    </ol>
+
+    <p>The method for decompression would be:</p>
+    <ol>
+    <li>Remove statistical from the encoded data.
+    <li>Remove Move-To-Front encoding from the encoded data.
+    <li>Apply the reverse Burrows-Wheeler Transform on the encoded data.
+    </ol>
+
+    <a name="implementation"></a>
+    <h2>Implementation</h2>
+    <p>I was extremely uncreative here.  My implementation comes directly from
+    <a href="http://www.hpl.hp.com/techreports/Compaq-DEC/SRC-RR-124.pdf">
+    &quot;A Block-sorting Lossless Data Compression Algorithm&quot;</a> by
+    Michael Burrows and David Wheeler.  The source code includes comments which
+    reference sections of their paper.  My hope is that anybody reading their
+    paper will be able to follow along with my source.  This section addresses
+    issues that were either discussed by Burrows and Wheeler or were required to
+    implement their transform on real data.</p>
+
+    <h3>Block Size</h3>
+    <p>BWT is a block sorting algorithm, but the transform isn't dependent upon
+    the size of the block.  BWT can be used on blocks of any size.  When I was
+    debugging my code I used 16 byte blocks, they are currently 4096 bytes.  I
+    chose 4096 bytes because it can be handled by most modern computers.  The
+    larger the block, the more opportunity you have for runs and repeated
+    patterns.  Burrows and Wheeler demonstrate improved compression ratios all
+    the way to 103 megabyte blocks for one benchmark file.</p>
+
+    <p>The obvious downsides to large blocks are that blocks must be stored
+    somewhere, so you need enough memory to hold the block and it's rotations.
+    An N byte block will have N rotations.  The rotations are also sorted, and
+    sorting is not a linear operation; larger blocks will also take more time.
+    </p>
+
+    <h3>End Of Block</h3>
+    <p>In the ideal world any encoded data will be evenly divisible by whatever
+    block size the transform happens to be using.  Unfortunately, I don't live
+    in that world.  More often than not, the last block is a partial block.
+    There are a few ways to deal with this that I can think of:</p>
+    <ul>
+    <li>Prefix the encoded data stream with a number of bytes encoded
+    <li>Encode an End-of-Block symbol into each block
+    <li>Prefix each block with a block size
+    <li>Use EOF to indicate end of last block
+    </ul>
+
+    <p>When I started playing with BWT I thought that I might want to
+    dynamically adjust the block size, so I prefixed each block with its size.
+    It also allowed for some error checking.  If the file ended before I read
+    all the data in a block something bad happened.  The dynamic block size
+    adjustment never came into being, so the code I'm releasing actually takes
+    the more compact approach of using the EOF as an indicator of a partial
+    block.</p>
+
+    <p>In order to handle a partial block at the end of a file, I made one minor
+    change to the BWT algorithm.  Burrows and Wheeler output the last characters
+    of the sorted rotations (<code>L</code>), followed by the index of the
+    contribution of the unrotated block (<code>I</code>).  If <code>L</code> is
+    written before <code>I</code>, an attempt to read all the characters of a
+    full size block will result in reading some or all of <code>I</code> before
+    the EOF is reached.  <code>L</code> can always be adjusted by removing the
+    data that belongs to <code>I</code>, but there's an easier approach.  My
+    implementation writes <code>I</code> then <code>L</code>.  If we hit an EOF
+    and <code>L</code> is a partial block we don't need to do any magic to get
+    <code>I</code>; we already have it.</p>
+
+    <h3>Block Rotations</h3>
+    <p>Burrows and Wheeler discuss a conceptual N &times; N matrix containing
+    rotations of N long blocks, but they leave implementation of the concept
+    to the implementer.  I'm pretty sure they don't expect anybody to use an
+    actual N &times; N matrix.</p>
+
+    <p>Since rotations are just strings starting at index i in the block and
+    wrapping around until, index (i - 1) mod N, I just refer to my rotations by
+    their starting indices.  My matrix of rotations is just an array of induces
+    into the unrotated block.</p>
+
+    <h3>Sorting of Rotations</h3>
+    <p>In order to keep things simple, I use the <code>qsort()</code> function
+    to sort rotations.  The efficiency of <code>qsort()</code> really depends
+    upon your compiler.  You'd think it was just a text book quick sort, but it
+    isn't always.  I think gcc uses a merge sort.</p>
+
+    <p>If you want to play with different sort functions, my
+    <a href="./sort.html">sort library</a> includes implementations of
+    common sort algorithms which are plug-in replacements for
+    <code>qsort()</code>.</p>
+
+    <p>It turns out that the sorting of rotations is one of the most time
+    consuming steps in the encode process.  Optimizing the sorting process seems
+    to be a pretty hot topic, with several published papers.  Burrows and
+    Wheeler suggest optimizing the process by using a
+    <a href="./sort.html#RadixSort">radix sort</a> to sort all rotations
+    by their first two characters.  Then using quick sort is use to sort within
+    the groups of rotations that match at their first two characters.
+    Versions 0.4 and later of my software introduce this optimization.</p>
+
+    <p>It should be pointed out that using a radix sort to sort rotations by
+    their first two characters prior using quick sort isn't always more optimal
+    than using quicksort alone.  Suppose an entire block is just one repeated
+    character.  All rotations in that block start with the same two characters,
+    so a radix sort of such a block will not reduce the amount of comparisons
+    performed by quick sort.</p>
+
+    <h3>MTF Encode/Decode</h3>
+    <p>My implementation of MTF encode/decode uses brute force.  Apparently
+    there are efficient implementations of MTF that are well known.  Not by me,
+    but I didn't go looking for them either.  One possible area to look for
+    optimization is in the search for a symbol's code during the encode process.
+    I do a sequential search.  It will find the code for a symbol in a run on
+    the first try.  The average search time for other symbols will be on the
+    order of half the alphabet length.  Other searches might have better average
+    cases.</p>
+
+    <p>Another potential from optimization is the Move-To-Front operation
+    itself.  My code is stored in an array, and I move each character over one
+    at a time.  Linked lists will make the move faster, but then you can't use
+    the array index as the code.</p>
+
+    <hr style="width:100%;">
+
+    <h2>Library Code Interface</h2>
+    <div id="api">
+        <h3>Transforming Data</h3>
+        <h4>BWXform</h4>
+        <p class="section">Declaration:</p>
+        <p class="indent">
+            <code>int BWXform(FILE *fpIn, FILE *fpOut, const xform_t method);
+            </code>
+        </p>
+
+        <p class="section">Description:</p>
+        <p class="indent">
+            This function performs a Burrows-Wheeler transformation on a file
+            (with optional move to front) and writes the resulting data to the
+            specified output file.  Comments in this function indicate
+            corresponding variables, labels, and sections in &quot;A
+            Block-sorting Lossless Data Compression Algorithm&quot; by M.
+            Burrows and D.J. Wheeler.
+        </p>
+
+        <p class="section">Parameters:</p>
+        <p class="indent">
+            <code>fpIn</code>
+            - The file stream to be transformed.  It must non-NULL and opened.
+            <br>
+            <code>fpOut</code>
+            - The file stream receiving the transformed data.  It must non-NULL
+            and opened.<br>
+            <code>method</code>
+            - <code>xform_t</code> type value indicating whether indicate
+            whether or not MTF is used.
+        </p>
+
+        <p class="section">Effects:</p>
+        <p class="indent">
+            A Burrows-Wheeler transformation (and possibly move to front
+            encoding) is applied to <code>fpIn</code>.  The results of the
+            transformation are written to <code>fpOut</code>.
+        </p>
+
+        <p class="section">Returned:</p>
+        <p class="indent">
+            0 for success, non-zero for failure.  <code>errno</code> will be set
+            in the event of a failure.
+        </p>
+
+        <h3>Reverse Transforming Data</h3>
+        <h4>BWReverseXform</h4>
+        <p class="section">Declaration:</p>
+        <p class="indent">
+            <code>int BWReverseXform(FILE *fpIn, FILE *fpOut,
+            const xform_t method);</code>
+        </p>
+
+        <p class="section">Description:</p>
+        <p class="indent">
+            This function reverses a Burrows-Wheeler transformation on a file
+            (with optional move to front) and writes the resulting data to the
+            specified output file.  Comments in this function indicate
+            corresponding variables, labels, and sections in &quot;A
+            Block-sorting Lossless Data Compression Algorithm&quot; by M.
+            Burrows and D.J. Wheeler.
+        </p>
+
+        <p class="section">Parameters:</p>
+        <p class="indent">
+            <code>fpIn</code>
+            - The file stream to be reverse transformed.  It must non-NULL and
+            opened.<br>
+            <code>fpOut</code>
+            - The file stream receiving the reverse transformed data.  It must
+            non-NULL and opened.<br>
+            <code>method</code>
+            - <code>xform_t</code> type value indicating whether indicate
+            whether or not MTF is used.
+        </p>
+
+        <p class="section">Effects:</p>
+        <p class="indent">
+            A Burrows-Wheeler reverse transformation (and possibly move to front
+            encoding) is applied to <code>fpIn</code>.  The results of the
+            transformation are written to <code>fpOut</code>.
+        </p>
+
+        <p class="section">Returned:</p>
+        <p class="indent">
+            0 for success, non-zero for failure.  <code>errno</code> will be set
+            in the event of a failure.
+        </p>
+    </div><!-- ends api-->
+
+    <h3>Portability</h3>
+    <p>All the source code that I have provided is written in strict ANSI C.  I
+    would expect it to build correctly on any machine with an ANSI C compiler.
+    I have tested the code compiled with gcc on Linux and
+    <a href="../free.html#gcc">mingw</a> on Windows 98/XP.</p>
+
+    <p>My implementation defines a value <code>BLOCK_SIZE</code> as 4096.  This
+    value may easily be changed.  Increasing <code>BLOCK_SIZE</code> generally
+    improves the compressibility of transformed data at the expense of memory
+    and computation time.  If <code>BLOCK_SIZE</code> is made larger than
+    <code>INT_MAX</code> the preprocessor will issue and error which may be
+    corrected by changing several <code>int</code>s to <code>long</code>s.  If
+    <code>BLOCK_SIZE</code> is made larger than the maximum <code>size_t</code>,
+    I would expect calls to <code>fread()</code> and <code>fwrite()</code> to
+    produce errors.  Whether the errors are compile-time or run-time is probably
+    dependent on the compiler.</p>
+
+    <hr style="width:100%;">
+
+    <h2>Further Information</h2>
+    <p>Michael Burrows and David Wheeler document their algorithm in
+    <a href="ftp://apotheca.hpl.hp.com/pub/dec/SRC/research-reports/SRC-124.pdf">
+    &quot;A Block-sorting Lossless Data Compression Algorithm&quot;</a>.  I
+    highly recommend that anybody interested in studying their algorithm make a
+    point of reading this document.</p>
+
+    <p>Further information about BWT and other block-sorting algorithms may be
+    found at <a href="http://www.datacompression.info/BWT.shtml">
+    http://www.datacompression.info/BWT.shtml</a>.  The site includes links to
+    discussions of the algorithm, studies, libraries, and tools using BWT.</p>
+
+    <hr style="width:100%;">
+
+    <a name="download"></a>
+    <h2>Actual Software</h2>
+    <p>I am releasing my implementation of the Burrows-Wheeler Transform and
+    Move-To-Front coding under the GNU
+    <a href="http://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
+    The source code repository is available on
+    <a href="http://www.github.com">GitHub</a></p>
+
+    <table summary="GitHub Repositories">
+      <tr>
+        <th valign="top" align="left">Repository Location</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/bwt">
+            https://github.com/michaeldipperstein/bwt
+          </a>
+        </th>
+      </tr>
+    </table>
+
+    <p>If you have any further questions or comments, you may contact me by
+    e-mail.  My e-mail address is:
+    <a href="mailto:mdipper@alumni.engr.ucsb.edu">mdipper@alumni.engr.ucsb.edu
+    </a></p>
+</div><!-- ends main-->
+
+</div><!--container1-->
+</div><!--container2-->
+
+<p><a href="./index.html">Home</a><br>
+Last updated on <em>July 31, 2017</em></p>
+
+</body>
+</html>
