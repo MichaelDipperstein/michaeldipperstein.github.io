@@ -1,0 +1,880 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+<title>Adaptive Delta Coding Discussion and Implementation</title>
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="quanta">
+<meta name="keywords" content="Delta Adaptive Code Compression Source">
+<link rel="stylesheet" href="./twocol.css" type="text/css">
+</head>
+
+<body>
+
+<div id="container2">
+<div id="container1">
+
+<div id="navbar">
+    <h1>Project Index</h1>
+    <hr style="width:90%;text-align: center;">
+
+    <p><a href="./index.html">Home</a></p>
+
+    <h2>Compression</h2>
+    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
+    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
+    <a href="./delta.html">Delta Coding</a><br>
+    <a href="./freq.html">Frequency Substitution</a><br>
+    <a href="./huffman.html">Huffman Coding</a><br>
+    <a href="./lzss.html">LZSS Coding</a><br>
+    <a href="./lzw.html">LZW Coding</a><br>
+    <a href="./rice.html">Rice (Golomb) Coding</a><br>
+    <a href="./rle.html">Run Length Encoding</a></p>
+
+    <h2>Misc. Programming</h2>
+    <p><a href="./projects.html">School Projects</a><br>
+    <a href="./mltp.html">Thesis Project</a><br>
+    <a href="./crypt.html">crypt(3) Source</a><br>
+    <a href="./hamming.html">Hamming Codes</a><br>
+    <a href="./bitarray.html">Bit Array Libraries</a><br>
+    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
+    <a href="./sqrt.html">Square Root Approximation Library</a><br>
+    <a href="./sort.html">Sort Library</a><br>
+    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
+    <a href="./optlist.html">Command Line Option Parser</a><br>
+    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
+    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
+    <a href="./ezini.html">INI File Parser and Creator</a></p>
+
+    <hr style="width:90%;text-align: center;">
+
+    <h1>Obligatory Links</h1>
+    <a href="http://counter.li.org/">
+        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
+        width="125" height="72">
+    </a><br>
+
+    <a href="http://validator.w3.org/check?uri=referer">
+        <img src="http://www.w3.org/Icons/valid-html401"
+        alt="Valid HTML 4.01 Strict" height="31" width="88">
+    </a>
+</div><!-- ends navbar-->
+
+<div id="main">
+    <div id="header">
+        <h1>Adaptive Delta Coding Discussion and Implementation</h1>
+        <h3>by Michael Dipperstein</h3>
+    </div>
+
+    <hr style="width:100%;">
+
+    <p>My experience with
+    <a href="./rice.html">Rice (Golomb)</a>
+    coding and a challenge that a student sent me had thinking about
+    creating a library that uses a small number of bits to encode the
+    differences between consecutive symbols, but it didn't seem useful or
+    all that interesting.  It became interesting and useful after I
+    attended <a href="http://www.bodynets.org/">BodyNets 2009</a> and saw
+    a presentation on &quot;Adaptive Lossless Compression in Wireless Body
+    Area Sensor Networks&quot;.  The presenter concluded that adaptive delta
+    encoding was a code space and time efficient method for compressing
+    data sampled from heart and gait monitors.  So with renewed enthusiasm, I
+    threw together a quick hack that implements adaptive delta encoding.</p>
+
+    <p>As with my other compression implementations, my intent is to publish
+    an easy to follow ANSI C implementation of the adaptive delta coding
+    algorithm.  Anyone familiar with ANSI C and the adaptive delta coding
+    algorithm should be able to follow and learn from my implementation.
+    There's a lot of room for improvement of compression ratios, speed, and
+    memory usage, but this project is about learning and sharing, not
+    perfection.</p>
+
+    <p>Click <a href="#download">here</a> for information on downloading my
+    source code.</p>
+
+    <p>The rest of this page discusses adaptive delta coding and the results
+    of my efforts so far.</p>
+
+    <hr style="width:100%;">
+
+    <a name="overview"></a>
+    <h2>Algorithm Overview</h2>
+    <p>Delta encoding represents streams of compressed symbols as the
+    difference between the current symbol and the previous symbol.  This
+    will result in compression for any data streams where it takes fewer
+    bits to represent the differences between consecutive symbols then it
+    does to represent the symbols themselves.</p>
+
+    <p>If you happen to have data that is well suited to delta encoding
+    (like audio or heart monitor data), you will find the simplicity of
+    this algorithm attractive.  However, delta encoding is not well suited
+    for all data types.</p>
+
+    <A name="encoding"></A>
+    <H3>Encoding</H3>
+    <p>Delta coding is fairly straightforward.  The first symbol of a delta
+    encoded stream is always written out unecoded.  After that, every
+    symbol is replaced with an <code>S</code> bit long signed value
+    representing the value of the current symbol minus the value of the
+    previous symbol (or the other way around if you like).</p>
+
+    <p>Using <code>S</code> bits to represent a signed value, allows for
+    differences ranging from <code>-2<sup>S-1</sup></code> to
+    <code>2<sup>S-1</sup>-1</code>.</p>
+
+    <p>Keeping <code>S</code> small is what allows for compression, but if
+    <code>S</code> is too small, the range of values that can be
+    represented by <code>S</code> bits might not include the range of
+    differences between consecutive symbols in the data steam.  Rather than
+    giving up when a delta is too large to be represented by <code>S</code>
+    bits, an escape symbol may be issued to indicate that the next symbol
+    is not delta encoded, then the current symbol may be output.</p>
+
+    <p>The Delta encoding algorithm does not specify an escape symbol.  I
+    used the smallest signed value that can be represented in <code>S</code>
+    bits (<code>-2<sup>S-1</sup></code>) as my escape symbol.</p>
+
+    <p>Based on the discussion above, encoding input consists of the
+    following steps:</p>
+
+    <p><strong>Step 1.</strong> Write the first symbol out unencoded.</p>
+
+    <p><strong>Step 2.</strong> Read the next symbol from the input stream.
+    Exit on EOF.</p>
+
+    <p><strong>Step 3.</strong> Compute the difference between the current
+    symbol and the previous symbol.</p>
+
+    <p><strong>Step 4.</strong> If the difference may be represented in
+    <code>S</code> bits:</p>
+        <ul style="margin-top: 0px; margin-bottom: 0px;">
+            <li>write the difference to the output stream
+            <li>go to step 2
+        </ul>
+
+    <p><strong>Step 5.</strong> If the difference cannot be represented in
+    <code>S</code> bits:</p>
+        <ul style="margin-top: 0px; margin-bottom: 0px;">
+            <li>write the escape symbol (the minimum <code>S</code> bit value)
+            <li>write the current symbol unencoded
+            <li>go to step 2
+        </ul>
+
+    <p>That's it.  I told you it was straightforward.</p>
+
+    <a name="decoding"></a>
+    <h3>Decoding</h3>
+    <p>Decoding isn't any harder than encoding.  Since first symbol of a
+    delta encoded stream is always written out unecoded, it be read back
+    and written without modification.  After that, read in an
+    <code>S</code> bit encoded symbol.  If the <code>S</code> bit symbol
+    is the escape code, read the next symbol and write it out, otherwise,
+    write out the symbol that is the sum of the previous symbol and the
+    difference that is represented by the <code>S</code> bit encoded
+    symbol.</p>
+
+    <p>Continue this process until the end of file is reached.</p>
+
+    <p>Based on the discussion above, decoding encoded input consists of
+    the following steps:</p>
+
+    <p><strong>Step 1.</strong> Copy the first symbol to the decoded output.</p>
+
+    <p><strong>Step 2.</strong> Read the next symbol from the input stream.
+    Exit on EOF.</p>
+
+    <p><strong>Step 3.</strong> If the current delta is an escape symbol:</p>
+        <ul style="margin-top: 0px; margin-bottom: 0px;">
+            <li>read the next symbol as an uncoded symbol
+            <li>write the symbol to the decoded output
+            <li>go to step 2
+        </ul>
+
+    <p><strong>Step 4.</strong> If the current delta is not an escape symbol:
+    </p>
+        <ul style="margin-top: 0px; margin-bottom: 0px;">
+            <li>compute the value of the previous symbol plus the delta
+            <li>write the resulting symbol to the decoded output
+            <li>go to step 2
+        </ul>
+
+    <hr style="width:100%;">
+
+    <h2>Implementation Issues</h2>
+    <h3>Adapting to Delta Ranges</h3>
+    <p>If you choose a value for the code word size (<code>S</code>) that
+    is too small, the Delta encoding algorithm will generate a lot of
+    escapes, and you'll end up with an encoded data stream that's larger
+    than the unencoded stream.  If you choose a value for <code>S</code>
+    that is too large, your encoded stream will be far from optimal size.
+    One solution to this problem is to implement an adaptive algorithm that
+    allows the the value of <code>S</code> to change as the data stream is
+    processed.</p>
+
+    <p>I'm not aware of any literature that provides details on different
+    adaptation algorithms, so I invented my own.  My goals for the algorithm
+    and it's implementation were for it to be code space and time efficient,
+    and easy to modify.  It also had to produce results that were
+    improvements over the results of the non-adaptive algorithm.</p>
+
+    <p>I incorporated an overflow counter to determine if the code word
+    size (<code>S</code>) should be adjusted upward, and underflow counter
+    to determine if <code>S</code> should be adjusted downward.  When a
+    delta value requires more (or less) bits than the full range of
+    <code>S</code>, the overflow (underflow) counter is incremented.
+    Otherwise the counter is decremented (but limited to 0).  When a
+    counter reaches 3, <code>S</code> is increased (decreased) by 1 and the
+    counter is set to zero.</p>
+
+    <p>The source code used to adjust the code word size is all contained
+    in the file <code>adapt.c</code>.  If you want to experiment with
+    different adaptive algorithms, you should start there.  I look forward
+    to hearing from anybody that has experimental results to report.</p>
+
+    <h3>Handling End-of-File (EOF)</h3>
+    <p>The EOF is of particular importance, because it is likely that an
+    encoded file will not have a number of bits that is an integral multiple
+    of bytes.  Most file systems require that files be stored in bytes, so
+    it's likely that encoded files will have spare bits.  If you don't know
+    where the <code>EOF</code> is, the spare bits may be decoded as another
+    symbol.</p>
+
+    <p>There are at least three solutions to the <code>EOF</code> problem:
+    </p>
+    <ol>
+        <li>Encode an <code>EOF</code> in the data stream.
+        <li>Keep a count of the number of data bytes encoded.
+        <li>Prevent the decoder from spitting out another data byte before
+        the actual <code>EOF</code> is reached.
+    </ol>
+
+    <p>I choose the third option for my implementation.  I write an escape
+    symbol at the end of an encoded file.  The decoder expects an unencoded
+    symbol to follow the escape, but file can always be ended in less bits
+    than it takes to write an unencoded symbol, so the decoder will get an
+    EOF before it gets the symbol it was expecting.</p>
+
+    <hr style="width:100%;">
+
+    <h2>Effectiveness</h2>
+    <p>So how well does delta coding work for generic data?  Not very well
+    at all.  Delta coding only works well when consecutive symbols have
+    similar values.  The greater the difference between two consecutive
+    symbols, the more bits are required to encode them.</p>
+
+    <p>One way to improve the compression obtained by delta coding on
+    generic data is to apply a reversible transformation on the data that
+    reduces the average value of a symbol as well as the difference between
+    consecutive symbols. The
+    <a href="./bwt.html">Burrows-Wheeler Transform (BWT)</a>
+    with Move-To-Front (MTF) encoding is such a transform.</p>
+
+    <p>I used the
+    <a href="http://links.uwaterloo.ca/calgary.corpus.html">Calgary Corpus
+    </a> as a data set to test the effectiveness of delta coding compared
+    to my implementations of <a href="./rice.html">Rice</a> coding,
+    <a href="./huffman.html">Huffman</a> coding and
+    <a href="./lzss.html">LZSS</a>.  The executive summary is that
+    even with the help of BWT and MTF, delta coding couldn't match the
+    compression ratios of Huffman coding or LZSS.  Rice coding with BWT and
+    MTF even has better compression ratios if the proper value for
+    <code>K</code> is selected.  However delta coding without BWT and MTF
+    performed better than Rice coding without BWT and MTF, which is the way
+    they should be used in a system with limited memory and processing
+    power.  The adaptive delta coding algorithm that I used also seems
+    robust enough that there is very little penalty for choosing the wrong
+    value for <code>s</code>.</p>
+
+    <p>The results of my test appear in the following tables:</p>
+
+    <table cellspacing="0" border="1"
+      summary="Traditionally Compressed Calgary Corpus Files">
+      <caption style="caption-side:bottom;">
+        TABLE 1.  Uncompressed and Traditionally Compressed Calgary Corpus Files
+      </caption>
+      <tbody>
+        <tr>
+          <td style="width: 10%;" align=left>File</td>
+          <td style="width: 10%;" align=center>Original</td>
+          <td style="width: 10%;" align=center>Huffman + BWT</td>
+          <td style="width: 10%;" align=center>LZSS + BWT</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>bib</td>
+          <td style="width: 10%;" align=right>111261</td>
+          <td style="width: 10%;" align=right>50849</td>
+          <td style="width: 10%;" align=right>69792</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>book1</td>
+          <td style="width: 10%;" align=right>768771</td>
+          <td style="width: 10%;" align=right>375140</td>
+          <td style="width: 10%;" align=right>531367</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>book2</td>
+          <td style="width: 10%;" align=right>610856</td>
+          <td style="width: 10%;" align=right>272857</td>
+          <td style="width: 10%;" align=right>384448</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>geo</td>
+          <td style="width: 10%;" align=right>102400</td>
+          <td style="width: 10%;" align=right>74328</td>
+          <td style="width: 10%;" align=right>80692</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>news</td>
+          <td style="width: 10%;" align=right>377109</td>
+          <td style="width: 10%;" align=right>187912</td>
+          <td style="width: 10%;" align=right>264605</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>obj1</td>
+          <td style="width: 10%;" align=right>21504</td>
+          <td style="width: 10%;" align=right>12835</td>
+          <td style="width: 10%;" align=right>14233</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>obj2</td>
+          <td style="width: 10%;" align=right>246814</td>
+          <td style="width: 10%;" align=right>103745</td>
+          <td style="width: 10%;" align=right>129296</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper1</td>
+          <td style="width: 10%;" align=right>53161</td>
+          <td style="width: 10%;" align=right>24041</td>
+          <td style="width: 10%;" align=right>33116</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper2</td>
+          <td style="width: 10%;" align=right>82199</td>
+          <td style="width: 10%;" align=right>37889</td>
+          <td style="width: 10%;" align=right>52814</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper3</td>
+          <td style="width: 10%;" align=right>46526</td>
+          <td style="width: 10%;" align=right>22428</td>
+          <td style="width: 10%;" align=right>31066</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper4</td>
+          <td style="width: 10%;" align=right>13286</td>
+          <td style="width: 10%;" align=right>6756</td>
+          <td style="width: 10%;" align=right>8934</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper5</td>
+          <td style="width: 10%;" align=right>11954</td>
+          <td style="width: 10%;" align=right>6069</td>
+          <td style="width: 10%;" align=right>7862</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper6</td>
+          <td style="width: 10%;" align=right>38105</td>
+          <td style="width: 10%;" align=right>17319</td>
+          <td style="width: 10%;" align=right>23596</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>pic</td>
+          <td style="width: 10%;" align=right>513216</td>
+          <td style="width: 10%;" align=right>102814</td>
+          <td style="width: 10%;" align=right>118892</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>progc</td>
+          <td style="width: 10%;" align=right>39611</td>
+          <td style="width: 10%;" align=right>17376</td>
+          <td style="width: 10%;" align=right>23447</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>progl</td>
+          <td style="width: 10%;" align=right>71646</td>
+          <td style="width: 10%;" align=right>24027</td>
+          <td style="width: 10%;" align=right>32692</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>progp</td>
+          <td style="width: 10%;" align=right>49379</td>
+          <td style="width: 10%;" align=right>17077</td>
+          <td style="width: 10%;" align=right>22777</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>trans</td>
+          <td style="width: 10%;" align=right>93695</td>
+          <td style="width: 10%;" align=right>36146</td>
+          <td style="width: 10%;" align=right>49277</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>Total</td>
+          <td style="width: 10%;" align=right>3251493</td>
+          <td style="width: 10%;" align=right>1389608</td>
+          <td style="width: 10%;" align=right>1878906</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>Percent</td>
+          <td style="width: 10%;" align=left>100.00%</td>
+          <td style="width: 10%;" align=left>42.74%</td>
+          <td style="width: 10%;" align=left>57.79%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <br>
+
+    <table cellspacing="0" border="1"
+      summary="Rice Calgary Corpus Files ">
+      <caption style="caption-side:bottom;">
+        TABLE 2.  Rice Calgary Corpus Files
+      </caption>
+      <tbody>
+        <tr>
+          <td style="width: 10%;" align=left rowspan="2">File</td>
+          <td style="width: 10%;" align=center colspan="2">Rice (K = 2)</td>
+          <td style="width: 10%;" align=center colspan="2">Rice (K = 4)</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=center>No Processing</td>
+          <td style="width: 10%;" align=center>BWT + MTF</td>
+          <td style="width: 10%;" align=center>No Processing</td>
+          <td style="width: 10%;" align=center>BWT + MTF</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>bib</td>
+          <td style="width: 10%;" align=right>310945</td>
+          <td style="width: 10%;" align=right>63729</td>
+          <td style="width: 10%;" align=right>132690</td>
+          <td style="width: 10%;" align=right>73271</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>book1</td>
+          <td style="width: 10%;" align=right>2411218</td>
+          <td style="width: 10%;" align=right>415556</td>
+          <td style="width: 10%;" align=right>983146</td>
+          <td style="width: 10%;" align=right>498044</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>book2</td>
+          <td style="width: 10%;" align=right>1912774</td>
+          <td style="width: 10%;" align=right>327191</td>
+          <td style="width: 10%;" align=right>780344</td>
+          <td style="width: 10%;" align=right>396846</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>geo</td>
+          <td style="width: 10%;" align=right>300282</td>
+          <td style="width: 10%;" align=right>164232</td>
+          <td style="width: 10%;" align=right>127322</td>
+          <td style="width: 10%;" align=right>92851</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>news</td>
+          <td style="width: 10%;" align=right>1122082</td>
+          <td style="width: 10%;" align=right>232063</td>
+          <td style="width: 10%;" align=right>466867</td>
+          <td style="width: 10%;" align=right>251512</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>obj1</td>
+          <td style="width: 10%;" align=right>66546</td>
+          <td style="width: 10%;" align=right>23962</td>
+          <td style="width: 10%;" align=right>27379</td>
+          <td style="width: 10%;" align=right>17040</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>obj2</td>
+          <td style="width: 10%;" align=right>812091</td>
+          <td style="width: 10%;" align=right>203702</td>
+          <td style="width: 10%;" align=right>322336</td>
+          <td style="width: 10%;" align=right>179249</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper1</td>
+          <td style="width: 10%;" align=right>162996</td>
+          <td style="width: 10%;" align=right>29119</td>
+          <td style="width: 10%;" align=right>66994</td>
+          <td style="width: 10%;" align=right>34729</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper2</td>
+          <td style="width: 10%;" align=right>262680</td>
+          <td style="width: 10%;" align=right>43819</td>
+          <td style="width: 10%;" align=right>106376</td>
+          <td style="width: 10%;" align=right>53286</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper3</td>
+          <td style="width: 10%;" align=right>149090</td>
+          <td style="width: 10%;" align=right>25339</td>
+          <td style="width: 10%;" align=right>60251</td>
+          <td style="width: 10%;" align=right>30261</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper4</td>
+          <td style="width: 10%;" align=right>41738</td>
+          <td style="width: 10%;" align=right>7340</td>
+          <td style="width: 10%;" align=right>17006</td>
+          <td style="width: 10%;" align=right>8676</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper5</td>
+          <td style="width: 10%;" align=right>36108</td>
+          <td style="width: 10%;" align=right>6827</td>
+          <td style="width: 10%;" align=right>14933</td>
+          <td style="width: 10%;" align=right>7873</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper6</td>
+          <td style="width: 10%;" align=right>112869</td>
+          <td style="width: 10%;" align=right>21022</td>
+          <td style="width: 10%;" align=right>47046</td>
+          <td style="width: 10%;" align=right>24949</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>pic</td>
+          <td style="width: 10%;" align=right>494376</td>
+          <td style="width: 10%;" align=right>227137</td>
+          <td style="width: 10%;" align=right>392391</td>
+          <td style="width: 10%;" align=right>327985</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>progc</td>
+          <td style="width: 10%;" align=right>106976</td>
+          <td style="width: 10%;" align=right>22658</td>
+          <td style="width: 10%;" align=right>46306</td>
+          <td style="width: 10%;" align=right>26174</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>progl</td>
+          <td style="width: 10%;" align=right>193202</td>
+          <td style="width: 10%;" align=right>34977</td>
+          <td style="width: 10%;" align=right>83408</td>
+          <td style="width: 10%;" align=right>46170</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>progp</td>
+          <td style="width: 10%;" align=right>130982</td>
+          <td style="width: 10%;" align=right>25144</td>
+          <td style="width: 10%;" align=right>57154</td>
+          <td style="width: 10%;" align=right>32098</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>trans</td>
+          <td style="width: 10%;" align=right>237650</td>
+          <td style="width: 10%;" align=right>51727</td>
+          <td style="width: 10%;" align=right>105406</td>
+          <td style="width: 10%;" align=right>61614</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>Total</td>
+          <td style="width: 10%;" align=right>8864605</td>
+          <td style="width: 10%;" align=right>1925544</td>
+          <td style="width: 10%;" align=right>3837355</td>
+          <td style="width: 10%;" align=right>2162628</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>Percent</td>
+          <td style="width: 10%;" align=left>272.63%</td>
+          <td style="width: 10%;" align=left>59.22%</td>
+          <td style="width: 10%;" align=left>118.02%</td>
+          <td style="width: 10%;" align=left>66.51%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <br>
+
+    <table cellspacing="0" border="1"
+      summary="Delta Calgary Corpus Files">
+      <caption style="caption-side:bottom;">
+        TABLE 3.  Delta Calgary Corpus Files
+      </caption>
+      <tbody>
+        <tr>
+          <td style="width: 10%;" align=left rowspan="2">File</td>
+          <td style="width: 10%;" align=center colspan="2">Delta (S = 2)</td>
+          <td style="width: 10%;" align=center colspan="2">Delta (S = 4)</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=center>No Processing</td>
+          <td style="width: 10%;" align=center>BWT + MTF</td>
+          <td style="width: 10%;" align=center>No Processing</td>
+          <td style="width: 10%;" align=center>BWT + MTF</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>bib</td>
+          <td style="width: 10%;" align=right>123019</td>
+          <td style="width: 10%;" align=right>84489</td>
+          <td style="width: 10%;" align=right>123017</td>
+          <td style="width: 10%;" align=right>84492</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>book1</td>
+          <td style="width: 10%;" align=right>847240</td>
+          <td style="width: 10%;" align=right>605189</td>
+          <td style="width: 10%;" align=right>847239</td>
+          <td style="width: 10%;" align=right>605192</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>book2</td>
+          <td style="width: 10%;" align=right>659954</td>
+          <td style="width: 10%;" align=right>466702</td>
+          <td style="width: 10%;" align=right>659953</td>
+          <td style="width: 10%;" align=right>466707</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>geo</td>
+          <td style="width: 10%;" align=right>117961</td>
+          <td style="width: 10%;" align=right>92639</td>
+          <td style="width: 10%;" align=right>117963</td>
+          <td style="width: 10%;" align=right>92640</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>news</td>
+          <td style="width: 10%;" align=right>404171</td>
+          <td style="width: 10%;" align=right>319905</td>
+          <td style="width: 10%;" align=right>404171</td>
+          <td style="width: 10%;" align=right>319906</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>obj1</td>
+          <td style="width: 10%;" align=right>22737</td>
+          <td style="width: 10%;" align=right>17481</td>
+          <td style="width: 10%;" align=right>22743</td>
+          <td style="width: 10%;" align=right>17482</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>obj2</td>
+          <td style="width: 10%;" align=right>295535</td>
+          <td style="width: 10%;" align=right>174819</td>
+          <td style="width: 10%;" align=right>295534</td>
+          <td style="width: 10%;" align=right>174821</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper1</td>
+          <td style="width: 10%;" align=right>57070</td>
+          <td style="width: 10%;" align=right>40565</td>
+          <td style="width: 10%;" align=right>57071</td>
+          <td style="width: 10%;" align=right>40567</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper2</td>
+          <td style="width: 10%;" align=right>89217</td>
+          <td style="width: 10%;" align=right>62711</td>
+          <td style="width: 10%;" align=right>89218</td>
+          <td style="width: 10%;" align=right>62711</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper3</td>
+          <td style="width: 10%;" align=right>49215</td>
+          <td style="width: 10%;" align=right>36416</td>
+          <td style="width: 10%;" align=right>49216</td>
+          <td style="width: 10%;" align=right>36416</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper4</td>
+          <td style="width: 10%;" align=right>14184</td>
+          <td style="width: 10%;" align=right>10398</td>
+          <td style="width: 10%;" align=right>14183</td>
+          <td style="width: 10%;" align=right>10403</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper5</td>
+          <td style="width: 10%;" align=right>13172</td>
+          <td style="width: 10%;" align=right>9394</td>
+          <td style="width: 10%;" align=right>13173</td>
+          <td style="width: 10%;" align=right>9394</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>paper6</td>
+          <td style="width: 10%;" align=right>41690</td>
+          <td style="width: 10%;" align=right>28949</td>
+          <td style="width: 10%;" align=right>41690</td>
+          <td style="width: 10%;" align=right>28949</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>pic</td>
+          <td style="width: 10%;" align=right>211592</td>
+          <td style="width: 10%;" align=right>182724</td>
+          <td style="width: 10%;" align=right>211593</td>
+          <td style="width: 10%;" align=right>182725</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>progc</td>
+          <td style="width: 10%;" align=right>41443</td>
+          <td style="width: 10%;" align=right>29544</td>
+          <td style="width: 10%;" align=right>41440</td>
+          <td style="width: 10%;" align=right>29544</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>progl</td>
+          <td style="width: 10%;" align=right>73771</td>
+          <td style="width: 10%;" align=right>44693</td>
+          <td style="width: 10%;" align=right>73772</td>
+          <td style="width: 10%;" align=right>44695</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>progp</td>
+          <td style="width: 10%;" align=right>51802</td>
+          <td style="width: 10%;" align=right>30931</td>
+          <td style="width: 10%;" align=right>51800</td>
+          <td style="width: 10%;" align=right>30934</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>trans</td>
+          <td style="width: 10%;" align=right>101770</td>
+          <td style="width: 10%;" align=right>66050</td>
+          <td style="width: 10%;" align=right>101770</td>
+          <td style="width: 10%;" align=right>66053</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>Total</td>
+          <td style="width: 10%;" align=right>3215543</td>
+          <td style="width: 10%;" align=right>2303599</td>
+          <td style="width: 10%;" align=right>3215546</td>
+          <td style="width: 10%;" align=right>2303631</td>
+        </tr>
+        <tr>
+          <td style="width: 10%;" align=left>Percent</td>
+          <td style="width: 10%;" align=left>98.89%</td>
+          <td style="width: 10%;" align=left>70.85%</td>
+          <td style="width: 10%;" align=left>98.89%</td>
+          <td style="width: 10%;" align=left>70.85%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <br>
+
+    <hr style="width:100%;">
+
+    <h2>Library Code Interface</h2>
+    <div id="api">
+        <h3>Encoding Data</h3>
+        <h4>DeltaEncodeFile</h4>
+        <p class="section">Declaration:</p>
+        <p class="indent">
+            <code>int DeltaEncodeFile(FILE *inFile, FILE *outFile,
+            unsigned charcodeSize);</code>
+        </p>
+
+        <p class="section">Description:</p>
+        <p class="indent">
+            This function reads from the specified input stream and writes an
+            adaptive delta encoded version to the specified output stream.
+        </p>
+
+        <p class="section">Parameters:</p>
+        <p class="indent">
+            <code>inFile</code>
+            - The file stream to be encoded.  It must opened.  NULL pointers
+            will return an error.<br>
+            <code>outFile</code>
+            - The file stream receiving the encoded results.  It must be opened.
+            NULL pointers will return an error.<br>
+            <code>charcodeSize</code>
+            - The number of bits used for code words at the start of coding.
+        </p>
+
+        <p class="section">Effects:</p>
+        <p class="indent">
+            Data from the <code>inFile</code> stream will be delta encoded and
+            written to the <code>outFile</code> stream.
+        </p>
+
+        <p class="section">Returned:</p>
+        <p class="indent">
+            0 for success, -1 for failure.  <code>errno</code> will be set in
+            the event of a failure.
+        </p>
+
+        <h3>Decoding Data</h3>
+        <h4>DeltaDecodeFile</h4>
+        <p class="section">Declaration:</p>
+        <p class="indent">
+            <code>int DeltaDecodeFile(FILE *inFile, FILE *outFile,
+            unsigned char codeSize);</code>
+        </p>
+
+        <p class="section">Description:</p>
+        <p class="indent">
+             This function reads from the specified adaptive delta encoded input
+             stream and writes a decoded version to the specified output stream.
+        </p>
+
+        <p class="section">Parameters:</p>
+        <p class="indent">
+            <code>inFile</code>
+            - The file stream to be decoded.  It must opened.  NULL pointers
+            will return an error.<br>
+            <code>outFile</code>
+            - The file stream receiving the decoded results.  It must be opened.
+            NULL pointers will return an error.<br>
+            <code>charcodeSize</code>
+            - The number of bits used for code words at the start of coding.
+        </p>
+
+        <p class="section">Effects:</p>
+        <p class="indent">
+             Data from the <code>inFile</code> stream will be decoded and
+             written to the <code>outFile</code> stream.
+        </p>
+
+        <p class="section">Returned:</p>
+        <p class="indent">
+            0 for success, -1 for failure.  <code>errno</code> will be set in
+            the event of a failure.
+        </p>
+    </div><!-- ends api-->
+    
+    <h3>Portability</h3>
+    <p>All the source code that I have provided is written in strict ANSI
+    C.  I would expect it to build correctly on any machine with an ANSI C
+    compiler.  I have tested the code compiled with gcc on Linux and
+    mingw on Windows XP.</p>
+
+    <p>The software makes no assumptions about the endianess of the machine
+    that it is executing on.  However, it does make some assumptions about
+    the size of data types.  The software makes use of the #if and #error
+    pre-processor directives as an attempt to check for violations of my
+    assumptions at compile time.</p>
+
+    <hr style="width:100%;">
+
+    <a name="download"></a>
+    <h2>Actual Software</h2>
+    <p>I am releasing my implementation of adaptive delta encoding and
+    decoding under the GNU
+    <a href="http://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
+    The source code repository is available on
+    <a href="http://www.github.com">GitHub</a></p>
+
+    <table summary="GitHub Repositories">
+      <tr>
+        <th valign="top" align="left">Repository Location</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/delta">
+            https://github.com/michaeldipperstein/delta
+          </a>
+        </th>
+      </tr>
+    </table>
+
+    <p>If you have any further questions or comments, you may contact me by
+    e-mail.  My e-mail address is:
+    <a href="mailto:mdipper@alumni.engr.ucsb.edu">
+    mdipper@alumni.engr.ucsb.edu</a></p>
+
+</div><!-- ends main-->
+
+</div><!--container1-->
+</div><!--container2-->
+
+<p><a href="./index.html">Home</a><br>
+Last updated on <em>August 1, 2017</em></p>
+
+</body>
+</html>
