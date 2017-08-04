@@ -1,0 +1,656 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+<title>Rice (Golomb) Coding Encoding Discussion and Implementation</title>
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="quanta">
+<meta name="keywords"
+content="Rice Golomb Encoding Compression Source Audio">
+<link rel="stylesheet" href="./twocol.css" type="text/css">
+</head>
+
+<body>
+
+<div id="container2">
+<div id="container1">
+
+<div id="navbar">
+    <h1>Project Index</h1>
+    <hr style="width:90%;text-align: center;">
+
+    <p><a href="./index.html">Home</a></p>
+
+    <h2>Compression</h2>
+    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
+    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
+    <a href="./delta.html">Delta Coding</a><br>
+    <a href="./freq.html">Frequency Substitution</a><br>
+    <a href="./huffman.html">Huffman Coding</a><br>
+    <a href="./lzss.html">LZSS Coding</a><br>
+    <a href="./lzw.html">LZW Coding</a><br>
+    <a href="./rice.html">Rice (Golomb) Coding</a><br>
+    <a href="./rle.html">Run Length Encoding</a></p>
+
+    <h2>Misc. Programming</h2>
+    <p><a href="./projects.html">School Projects</a><br>
+    <a href="./mltp.html">Thesis Project</a><br>
+    <a href="./crypt.html">crypt(3) Source</a><br>
+    <a href="./hamming.html">Hamming Codes</a><br>
+    <a href="./bitarray.html">Bit Array Libraries</a><br>
+    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
+    <a href="./sqrt.html">Square Root Approximation Library</a><br>
+    <a href="./sort.html">Sort Library</a><br>
+    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
+    <a href="./optlist.html">Command Line Option Parser</a><br>
+    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
+    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
+    <a href="./ezini.html">INI File Parser and Creator</a></p>
+
+    <hr style="width:90%;text-align: center;">
+
+    <h1>Obligatory Links</h1>
+    <a href="http://counter.li.org/">
+        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
+        width="125" height="72">
+    </a><br>
+
+    <a href="http://validator.w3.org/check?uri=referer">
+        <img src="http://www.w3.org/Icons/valid-html401"
+        alt="Valid HTML 4.01 Strict" height="31" width="88">
+    </a>
+</div><!-- ends navbar-->
+
+<div id="main">
+    <div id="header">
+        <h1>Rice (Golomb) Coding Encoding Discussion and Implementation</h1>
+        <h3>by Michael Dipperstein</h3>
+    </div>
+
+    <hr style="width:100%;">
+
+    <p>I had to scratch yet another compression itch.  I know very little
+    about compressing wave audio files, but some questions I received made
+    me want to find out slightly more.  It turns out that it's possible to
+    convert wave files into a format where the bulk of the data can be
+    represented by low value numbers.  Once that is done, Rice Encoding
+    (a special case of Golomb Coding) can be applied to reduce the bits
+    required to represent the lower value numbers.</p>
+
+    <p>Rice's algorithm seemed easy to implement, so I felt compelled to
+    give it a try.  I was right (sometimes that happens).  A rough cut of
+    an implementation of the algorithm didn't take that long to implement.
+    If you're going to try your own implementation, you'll need a way to
+    read and write individual bits, the rest is not that big of a deal.
+    I already have a <a href="./bitfile.html">bitfile</a> library
+    that handles the reading and writing of bits, so I was left with the
+    stuff that is not a big deal.</p>
+
+    <p>As with my other compression implementations, my intent is to
+    publish an easy to follow ANSI C implementation of the Rice
+    encoding and decoding algorithms.  Anyone familiar with ANSI C and Rice
+    (or Golomb) Encoding should be able to follow and learn from my
+    implementation.  I'm sure that there's room for improvement of
+    compression ratios, speed, and memory usage, but this project is about
+    learning and sharing, not perfection.</p>
+
+    <p>Click here for a link to my <a href="#download">Rice source</a>.
+    The rest of this page discusses Rice Encoding and my implementation.</p>
+
+    <hr style="width:100%;">
+
+    <a name="overview"></a>
+    <h2>Algorithm Overview</h2>
+    <p>Given a constant <code>M</code>, any symbol <code>S</code> can be
+    represented as a quotient (<code>Q</code>) and remainder
+    (<code>R</code>), where:<br>
+    <span style="padding-left: 1pc;"><code>S = Q &times; M + R</code>.</span>
+    </p>
+
+    <p>If <code>S</code> is small (relative to <code>M</code>) then
+    <code>Q</code> will also be small.  Rice encoding is designed to reduce
+    the number of bits required to represent symbols where <code>Q</code> is
+    small.</p>
+
+    <p>Rather than representing both <code>Q</code> and <code>R</code> as
+    binary values, Rice encoding represents <code>Q</code> as a unary
+    value and <code>R</code> as a binary value.</p>
+
+    <p>For those not familiar with unary notation, a value <code>N</code>
+    may be represented by <code>N</code> 1s followed by a 0.<br>
+    <span style="padding-left: 1pc;">
+    <strong>Example:</strong> 3 = 1110 and 5 = 111110.</span>
+    </p>
+
+    <p><span style="font-weight:bold; text-decoration:underline;">Note:</span>
+    The following is true for binary values, if <code>log<sub>2</sub>(M) =
+    K</code> where <code>K</code> is an integer:</p>
+    <ol>
+        <li><code>Q = S >> K</code> (<code>S</code> left shifted <code>K</code>
+        bits)
+        <li><code>R = S &amp; (M - 1)</code> (<code>S</code> bitwise ANDed with
+        <code>(M - 1)</code>)
+        <li><code>R</code> can be represented using <code>K</code> bits.
+    </ol>
+
+    <a name="encoding"></a>
+    <h3>Encoding</h3>
+    <p>Rice coding is fairly straightforward.</p>
+    <p>Given a bit length, <code>K</code>.  Compute the modulus,
+    <code>M</code> using by the equation <code>M = 2<sup>K</sup></code>.
+    Then do following for each symbol (<code>S</code>):</p>
+
+    <ol>
+        <li>Write out <code>S &amp; (M - 1)</code> in binary.
+        <li>Write out <code>S >> K</code> in unary.
+    </ol>
+
+    <p>That's it.  I told you it was straightforward.</p>
+
+    <a name="example1"></a>
+    <p><strong>Example:</strong><br>
+    Encode the 8-bit value 18 (0b00010010) when <code>K</code> = 4
+    (<code>M</code> = 16)</p>
+
+    <ol>
+        <li><code>S &amp; (M - 1)</code> = 18 &amp; (16 - 1) =
+        0b00010010 &amp; 0b1111 = 0b0010
+        <li><code>S >> K</code> = 18 >> 4  = 0b00010010 >> 4 =
+        0b0001 (10 in unary)
+    </ol>
+
+    <p>So the encoded value is 100010, saving 2 bits.</p>
+
+    <a name="decoding"></a>
+    <h3>Decoding</h3>
+    <p>Decoding isn't any harder than encoding.</p>
+
+    <p>As with encoding, given a bit length, <code>K</code>.  Compute the
+    modulus, <code>M</code> using by the equation <code>M = 2<sup>K</sup>
+    </code>.  Then do following for each encoded symbol (<code>S</code>):
+    </p>
+
+    <ol>
+        <li>Determine <code>Q</code> by counting the number of 1s before the
+        first 0.
+        <li>Determine <code>R</code> reading the next <code>K</code> bits as
+        a binary value.
+        <li>Write out <code>S</code> as <code>Q &times; M + R</code>.
+    </ol>
+
+    <a name="example2"></a>
+    <p><strong>Example:</strong><br>
+    Decode the encoded value 100010 when <code>K</code> = 4
+    (<code>M</code> = 16)</p>
+    <ol>
+        <li><code>Q</code> = 1
+        <li><code>R</code> = 0b0010 = 2
+        <li><code>S</code> = <code>Q &times; M + R</code> = 1 &times; 16 + 2 =
+        18
+    </ol>
+
+    <hr style="width:100%;">
+
+    <h2>Effectiveness</h2>
+    <p>So how well does Rice coding work for generic data?  Not very well
+    at all.  Rice coding only works well when symbols are encoded with
+    small values of <code>Q</code>.  Since <code>Q</code> is unary,
+    encoded symbols can become quite large for even slightly large
+    <code>Q</code>s.  It takes 8 bits just to represent the value 7.</p>
+
+    <p>One way to improve the compression obtained by Rice coding on
+    generic data is to apply reversible transformation on the data that
+    reduces the average value of a symbol. The
+    <a href="./bwt.html">Burrows-Wheeler Transform (BWT)</a>
+    with Move-To-Front (MTF) encoding is such a transform.</p>
+
+    <p>I used the
+    <a href="http://links.uwaterloo.ca/calgary.corpus.html">Calgary Corpus
+    </a> as a data set to test the effectiveness of Rice coding compared to
+    my implementations of <a href="./huffman.html">Huffman</a>
+    coding and <a href="./lzss.html">LZSS</a>.  The executive
+    summary is that even with the help of BWT and MTF, Rice coding couldn't
+    match the compression ratios of Huffman coding or LZSS.  However BWT and
+    MTF allowed Rice coding to actually reduce the size of the data sets.  The
+    results of my test appear in the following table:</p>
+
+    <table cellspacing="0" border="1"
+        summary="Comparison With Other Algorithms">
+        <caption style="caption-side:bottom;">
+            TABLE 1.  Calgary Corpus Test Results
+        </caption>
+
+        <tbody>
+        <tr>
+            <td style="width: 10%;" align=left>File</td>
+            <td style="width: 10%;" align=center>Original</td>
+            <td style="width: 10%;" align=center>Huffman</td>
+            <td style="width: 10%;" align=center>BWT + MTF + Huffman</td>
+            <td style="width: 10%;" align=center>LZSS</td>
+            <td style="width: 10%;" align=center>BWT + MTF + LZSS</td>
+            <td style="width: 10%;" align=center>Rice (K = 4 bits)</td>
+            <td style="width: 10%;" align=center>BWT + MTF + Rice (K = 4 bits)</td>
+            <td style="width: 10%;" align=center>Rice (K = 2 bits)</td>
+            <td style="width: 10%;" align=center>BWT + MTF + Rice (K = 2 bits)</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>bib</td>
+            <td style="width: 10%;" align=right>111261</td>
+            <td style="width: 10%;" align=right>73173</td>
+            <td style="width: 10%;" align=right>50849</td>
+            <td style="width: 10%;" align=right>52551</td>
+            <td style="width: 10%;" align=right>69792</td>
+            <td style="width: 10%;" align=right>132690</td>
+            <td style="width: 10%;" align=right>73271</td>
+            <td style="width: 10%;" align=right>310945</td>
+            <td style="width: 10%;" align=right>63729</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>book1</td>
+            <td style="width: 10%;" align=right>768771</td>
+            <td style="width: 10%;" align=right>438792</td>
+            <td style="width: 10%;" align=right>375140</td>
+            <td style="width: 10%;" align=right>423905</td>
+            <td style="width: 10%;" align=right>531367</td>
+            <td style="width: 10%;" align=right>983146</td>
+            <td style="width: 10%;" align=right>498044</td>
+            <td style="width: 10%;" align=right>2411218</td>
+            <td style="width: 10%;" align=right>415556</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>book2</td>
+            <td style="width: 10%;" align=right>610856</td>
+            <td style="width: 10%;" align=right>368788</td>
+            <td style="width: 10%;" align=right>272857</td>
+            <td style="width: 10%;" align=right>285896</td>
+            <td style="width: 10%;" align=right>384448</td>
+            <td style="width: 10%;" align=right>780344</td>
+            <td style="width: 10%;" align=right>396846</td>
+            <td style="width: 10%;" align=right>1912774</td>
+            <td style="width: 10%;" align=right>327191</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>geo</td>
+            <td style="width: 10%;" align=right>102400</td>
+            <td style="width: 10%;" align=right>73845</td>
+            <td style="width: 10%;" align=right>74328</td>
+            <td style="width: 10%;" align=right>83349</td>
+            <td style="width: 10%;" align=right>80692</td>
+            <td style="width: 10%;" align=right>127322</td>
+            <td style="width: 10%;" align=right>92851</td>
+            <td style="width: 10%;" align=right>300282</td>
+            <td style="width: 10%;" align=right>164232</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>news</td>
+            <td style="width: 10%;" align=right>377109</td>
+            <td style="width: 10%;" align=right>246891</td>
+            <td style="width: 10%;" align=right>187912</td>
+            <td style="width: 10%;" align=right>194679</td>
+            <td style="width: 10%;" align=right>264605</td>
+            <td style="width: 10%;" align=right>466867</td>
+            <td style="width: 10%;" align=right>251512</td>
+            <td style="width: 10%;" align=right>1122082</td>
+            <td style="width: 10%;" align=right>232063</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>obj1</td>
+            <td style="width: 10%;" align=right>21504</td>
+            <td style="width: 10%;" align=right>17338</td>
+            <td style="width: 10%;" align=right>12835</td>
+            <td style="width: 10%;" align=right>12267</td>
+            <td style="width: 10%;" align=right>14233</td>
+            <td style="width: 10%;" align=right>27379</td>
+            <td style="width: 10%;" align=right>17040</td>
+            <td style="width: 10%;" align=right>66546</td>
+            <td style="width: 10%;" align=right>23962</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>obj2</td>
+            <td style="width: 10%;" align=right>246814</td>
+            <td style="width: 10%;" align=right>195384</td>
+            <td style="width: 10%;" align=right>103745</td>
+            <td style="width: 10%;" align=right>103090</td>
+            <td style="width: 10%;" align=right>129296</td>
+            <td style="width: 10%;" align=right>322336</td>
+            <td style="width: 10%;" align=right>179249</td>
+            <td style="width: 10%;" align=right>812091</td>
+            <td style="width: 10%;" align=right>203702</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>paper1</td>
+            <td style="width: 10%;" align=right>53161</td>
+            <td style="width: 10%;" align=right>33819</td>
+            <td style="width: 10%;" align=right>24041</td>
+            <td style="width: 10%;" align=right>24464</td>
+            <td style="width: 10%;" align=right>33116</td>
+            <td style="width: 10%;" align=right>66994</td>
+            <td style="width: 10%;" align=right>34729</td>
+            <td style="width: 10%;" align=right>162996</td>
+            <td style="width: 10%;" align=right>29119</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>paper2</td>
+            <td style="width: 10%;" align=right>82199</td>
+            <td style="width: 10%;" align=right>48077</td>
+            <td style="width: 10%;" align=right>37889</td>
+            <td style="width: 10%;" align=right>39693</td>
+            <td style="width: 10%;" align=right>52814</td>
+            <td style="width: 10%;" align=right>106376</td>
+            <td style="width: 10%;" align=right>53286</td>
+            <td style="width: 10%;" align=right>262680</td>
+            <td style="width: 10%;" align=right>43819</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>paper3</td>
+            <td style="width: 10%;" align=right>46526</td>
+            <td style="width: 10%;" align=right>27702</td>
+            <td style="width: 10%;" align=right>22428</td>
+            <td style="width: 10%;" align=right>23467</td>
+            <td style="width: 10%;" align=right>31066</td>
+            <td style="width: 10%;" align=right>60251</td>
+            <td style="width: 10%;" align=right>30261</td>
+            <td style="width: 10%;" align=right>149090</td>
+            <td style="width: 10%;" align=right>25339</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>paper4</td>
+            <td style="width: 10%;" align=right>13286</td>
+            <td style="width: 10%;" align=right>8267</td>
+            <td style="width: 10%;" align=right>6756</td>
+            <td style="width: 10%;" align=right>6795</td>
+            <td style="width: 10%;" align=right>8934</td>
+            <td style="width: 10%;" align=right>17006</td>
+            <td style="width: 10%;" align=right>8676</td>
+            <td style="width: 10%;" align=right>41738</td>
+            <td style="width: 10%;" align=right>7340</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>paper5</td>
+            <td style="width: 10%;" align=right>11954</td>
+            <td style="width: 10%;" align=right>7893</td>
+            <td style="width: 10%;" align=right>6069</td>
+            <td style="width: 10%;" align=right>6072</td>
+            <td style="width: 10%;" align=right>7862</td>
+            <td style="width: 10%;" align=right>14933</td>
+            <td style="width: 10%;" align=right>7873</td>
+            <td style="width: 10%;" align=right>36108</td>
+            <td style="width: 10%;" align=right>6827</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>paper6</td>
+            <td style="width: 10%;" align=right>38105</td>
+            <td style="width: 10%;" align=right>24495</td>
+            <td style="width: 10%;" align=right>17319</td>
+            <td style="width: 10%;" align=right>17619</td>
+            <td style="width: 10%;" align=right>23596</td>
+            <td style="width: 10%;" align=right>47046</td>
+            <td style="width: 10%;" align=right>24949</td>
+            <td style="width: 10%;" align=right>112869</td>
+            <td style="width: 10%;" align=right>21022</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>pic</td>
+            <td style="width: 10%;" align=right>513216</td>
+            <td style="width: 10%;" align=right>107354</td>
+            <td style="width: 10%;" align=right>102814</td>
+            <td style="width: 10%;" align=right>105373</td>
+            <td style="width: 10%;" align=right>118892</td>
+            <td style="width: 10%;" align=right>392391</td>
+            <td style="width: 10%;" align=right>327985</td>
+            <td style="width: 10%;" align=right>494376</td>
+            <td style="width: 10%;" align=right>227137</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>progc</td>
+            <td style="width: 10%;" align=right>39611</td>
+            <td style="width: 10%;" align=right>26381</td>
+            <td style="width: 10%;" align=right>17376</td>
+            <td style="width: 10%;" align=right>17559</td>
+            <td style="width: 10%;" align=right>23447</td>
+            <td style="width: 10%;" align=right>46306</td>
+            <td style="width: 10%;" align=right>26174</td>
+            <td style="width: 10%;" align=right>106976</td>
+            <td style="width: 10%;" align=right>22658</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>progl</td>
+            <td style="width: 10%;" align=right>71646</td>
+            <td style="width: 10%;" align=right>43425</td>
+            <td style="width: 10%;" align=right>24027</td>
+            <td style="width: 10%;" align=right>22536</td>
+            <td style="width: 10%;" align=right>32692</td>
+            <td style="width: 10%;" align=right>83408</td>
+            <td style="width: 10%;" align=right>46170</td>
+            <td style="width: 10%;" align=right>193202</td>
+            <td style="width: 10%;" align=right>34977</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>progp</td>
+            <td style="width: 10%;" align=right>49379</td>
+            <td style="width: 10%;" align=right>30666</td>
+            <td style="width: 10%;" align=right>17077</td>
+            <td style="width: 10%;" align=right>15449</td>
+            <td style="width: 10%;" align=right>22777</td>
+            <td style="width: 10%;" align=right>57154</td>
+            <td style="width: 10%;" align=right>32098</td>
+            <td style="width: 10%;" align=right>130982</td>
+            <td style="width: 10%;" align=right>25144</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>trans</td>
+            <td style="width: 10%;" align=right>93695</td>
+            <td style="width: 10%;" align=right>65720</td>
+            <td style="width: 10%;" align=right>36146</td>
+            <td style="width: 10%;" align=right>33796</td>
+            <td style="width: 10%;" align=right>49277</td>
+            <td style="width: 10%;" align=right>105406</td>
+            <td style="width: 10%;" align=right>61614</td>
+            <td style="width: 10%;" align=right>237650</td>
+            <td style="width: 10%;" align=right>51727</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>Total</td>
+            <td style="width: 10%;" align=right>3251493</td>
+            <td style="width: 10%;" align=right>1838010</td>
+            <td style="width: 10%;" align=right>1389608</td>
+            <td style="width: 10%;" align=right>1468560</td>
+            <td style="width: 10%;" align=right>1878906</td>
+            <td style="width: 10%;" align=right>3837355</td>
+            <td style="width: 10%;" align=right>2162628</td>
+            <td style="width: 10%;" align=right>8864605</td>
+            <td style="width: 10%;" align=right>1925544</td>
+        </tr>
+        <tr>
+            <td style="width: 10%;" align=left>Percent</td>
+            <td style="width: 10%;" align=left><br></td>
+            <td style="width: 10%;" align=right>56.53%</td>
+            <td style="width: 10%;" align=right>42.74%</td>
+            <td style="width: 10%;" align=right>45.17%</td>
+            <td style="width: 10%;" align=right>57.79%</td>
+            <td style="width: 10%;" align=right>118.02%</td>
+            <td style="width: 10%;" align=right>66.51%</td>
+            <td style="width: 10%;" align=right>272.63%</td>
+            <td style="width: 10%;" align=right>59.22%</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <hr style="width:100%;">
+
+    <h2>Implementation Issues</h2>
+    <h3>Size of Symbol</h3>
+    <p>Rice's algorithm does not place any restrictions on the size of
+    symbols being encoded.  However the size of the encoded symbols must
+    be known when the algorithm is actually being applied to data.  My
+    implementation of Rice's algorithm only encodes bytes.  This places the
+    additional restriction that <code>K</code> is between 1 and 7.</p>
+
+    <h3>Handling End-of-File (EOF)</h3>
+    <p>The EOF is of particular importance, because it is likely that an
+    encoded file will not have a number of bits that is a integral multiple
+    of bytes.  Most file systems require that files be stored in bytes, so
+    it's likely that encoded files will have spare bits.  If you don't know
+    where the <code>EOF</code> is, the spare bits may be decoded as another
+    symbol.</p>
+
+    <p>There are at least three solutions to the <code>EOF</code> problem:
+    </p>
+    <ol>
+        <li>Encode an <code>EOF</code> in the data stream.</li>
+        <li>Keep a count of the number of data bytes encoded.</li>
+        <li>Prevent the decoder from spitting out another data byte until
+        the actual <code>EOF</code> is reached.</li>
+    </ol>
+
+    <p>I choose the third option for my implementation.  My decoder will
+    not produce another symbol until it sees the 0 indicating the end of
+    the unary portion followed by <code>K</code> bits.  Filling the
+    spare bits in the last byte of a file with ones is enough to keep my
+    decoder from decoding an extra symbol.</p>
+
+    <hr style="width:100%;">
+
+    <h2>Library Code Interface</h2>
+    <div id="api">
+        <h3>Encoding Data</h3>
+        <h4>RiceEncodeFile</h4>
+        <p class="section">Declaration:</p>
+        <p class="indent">
+            <code>int RiceEncodeFile(FILE *inFile, FILE *outFile, const
+            unsigned char k)</code>
+        </p>
+
+        <p class="section">Description:</p>
+        <p class="indent">
+            This routine reads an input file one character at a time and writes
+            out a Rice-Golomb encoded version of that file.
+        </p>
+
+        <p class="section">Parameters:</p>
+        <p class="indent">
+            <code>inFile</code>
+            - The file stream to be encoded.  It must opened.  NULL pointers
+            will return an error.<br>
+            <code>outFile</code>
+            - The file stream receiving the encoded results.  It must be opened.
+            NULL pointers will return an error.<br>
+            <code>k</code>
+            - The length of binary portion of encoded word.
+        </p>
+
+        <p class="section">Effects:</p>
+        <p class="indent">
+            <code>inFile</code> is encoded using the Rice-Golomb algorithm with
+            the binary portion of code words <code>k</code> bits long.  The
+            encoded output is written to <code>outFile</code>.  Neither file is
+            closed after exit.
+        </p>
+
+        <p class="section">Returned:</p>
+        <p class="indent">
+            0 for success, -1 for failure.  <code>errno</code> will be set in
+            the event of a failure.
+        </p>
+
+        <h3>Decoding Data</h3>
+        <h4>RiceDecodeFile</h4>
+        <p class="section">Declaration:</p>
+        <p class="indent">
+            <code>int RiceDecodeFile(FILE *inFile, FILE *outFile, const
+            unsigned char k)</code>
+        </p>
+
+        <p class="section">Description:</p>
+        <p class="indent">
+            This routine reads an input file one encoded string at a time and
+            decodes it using the Rice-Golomb algorithm.
+        </p>
+
+        <p class="section">Parameters:</p>
+        <p class="indent">
+            <code>inFile</code>
+            - The file stream to be decoded.  It must opened.  NULL pointers
+            will return an error.<br>
+            <code>outFile</code>
+            - The file stream receiving the decoded results.  It must be opened.
+            NULL pointers will return an error.<br>
+            <code>k</code>
+            - The length of binary portion of encoded word.
+        </p>
+
+        <p class="section">Effects:</p>
+        <p class="indent">
+            <code>inFile</code> is decoded using the Rice-Golomb algorithm with
+            the binary portion of code words <code>k</code> bits long.  The
+            decoded output is written to <code>outFile</code>.  Neither file is
+            closed after exit.
+        </p>
+
+        <p class="section">Returned:</p>
+        <p class="indent">
+            0 for success, -1 for failure.  <code>errno</code> will be set in
+            the event of a failure.
+        </p>
+    </div><!-- ends api-->
+
+    <hr style="width:100%;">
+
+    <h2>Further Information</h2>
+    <p>Further discussion of Rice Encoding may be found at
+    <a href="http://en.wikipedia.org/wiki/Golomb_coding">Wikipedia</a> and
+    <a href="http://www.monkeysaudio.com/theory.html">Monkey's Audio - a
+    fast and powerful lossless audio compressor</a>.
+
+    <hr style="width:100%;">
+
+    <a name="download"></a>
+    <h2>Actual Software</h2>
+    <p>I am releasing my implementations of fRice encoding/decoding under the
+    <a href="http://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
+    The source code repository is available on
+    <a href="http://www.github.com">GitHub</a>.  I recommend that you checkout
+    the latest revision of the master branch, unless you're looking for
+    something specific.</p>
+
+    <table summary="GitHub Repositories">
+      <tr>
+        <th valign="top" align="left">Repository Location</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/rice">
+            https://github.com/michaeldipperstein/rice
+          </a>
+        </th>
+      </tr>
+    </table>
+
+    <hr style="width:100%;">
+
+    <h3>Portability</h3>
+    <p>All the source code that I have provided is written in strict ANSI
+    C.  I would expect it to build correctly on any machine with an ANSI C
+    compiler.  I have tested the code compiled with gcc on Linux and
+    mingw on Windows XP.</p>
+
+    <p>The software makes no assumptions about the endianess of the machine
+    that it is executing on.  However, it does make some assumptions about
+    the size of data types.  The software makes use of the #if and #error
+    pre-processor directives as an attempt to check for violations of my
+    assumptions at compile time.</p>
+
+    <p>If you have any further questions or comments, you may contact me by
+    e-mail.  My e-mail address is:
+    <a href="mailto:mdipper@alumni.engr.ucsb.edu">
+    mdipper@alumni.engr.ucsb.edu</a></p>
+
+</div><!-- ends main-->
+
+</div><!--container1-->
+</div><!--container2-->
+
+<p><a href="./index.html">Home</a><br>
+Last updated on <em>August 3, 2017</em></p>
+
+</body>
+</html>

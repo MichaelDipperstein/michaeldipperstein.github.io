@@ -1,0 +1,269 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+<title>Bit File Stream Libraries</title>
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="quanta">
+<meta name="keywords" content="bitwise operations files compression encryption">
+<meta name="keywords" content="bitfile class library">
+<link rel="stylesheet" href="./twocol.css" type="text/css">
+</head>
+
+<body>
+
+<div id="container2">
+<div id="container1">
+
+<div id="navbar">
+    <h1>Project Index</h1>
+    <hr style="width:90%;text-align: center;">
+
+    <p><a href="./index.html">Home</a></p>
+
+    <h2>Compression</h2>
+    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
+    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
+    <a href="./delta.html">Delta Coding</a><br>
+    <a href="./freq.html">Frequency Substitution</a><br>
+    <a href="./huffman.html">Huffman Coding</a><br>
+    <a href="./lzss.html">LZSS Coding</a><br>
+    <a href="./lzw.html">LZW Coding</a><br>
+    <a href="./rice.html">Rice (Golomb) Coding</a><br>
+    <a href="./rle.html">Run Length Encoding</a></p>
+
+    <h2>Misc. Programming</h2>
+    <p><a href="./projects.html">School Projects</a><br>
+    <a href="./mltp.html">Thesis Project</a><br>
+    <a href="./crypt.html">crypt(3) Source</a><br>
+    <a href="./hamming.html">Hamming Codes</a><br>
+    <a href="./bitarray.html">Bit Array Libraries</a><br>
+    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
+    <a href="./sqrt.html">Square Root Approximation Library</a><br>
+    <a href="./sort.html">Sort Library</a><br>
+    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
+    <a href="./optlist.html">Command Line Option Parser</a><br>
+    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
+    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
+    <a href="./ezini.html">INI File Parser and Creator</a></p>
+
+    <hr style="width:90%;text-align: center;">
+
+    <h1>Obligatory Links</h1>
+    <a href="http://counter.li.org/">
+        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
+        width="125" height="72">
+    </a><br>
+
+    <a href="http://validator.w3.org/check?uri=referer">
+        <img src="http://www.w3.org/Icons/valid-html401"
+        alt="Valid HTML 4.01 Strict" height="31" width="88">
+    </a>
+</div><!-- ends navbar-->
+
+<div id="main">
+    <div id="header">
+        <h1>Bit File Stream Libraries</h1>
+    </div>
+
+    <hr style="width:100%;">
+
+    <p>For some reason I keep finding myself dabbling in the worlds of
+    compression and encryption.  I'm not an expert in either of these
+    areas, nor do I aspire to become one.  It's just something that catches
+    my interest from time to time.</p>
+
+    <p>On computers, both compression and encryption usually take bit
+    patterns with a given meaning and translate them to other patterns
+    intended to have the same meaning.  This typically means having to
+    read, write, and manipulate arbitrary groups of bits.  To save myself
+    from reinventing the wheel every time I played with another compression
+    or encryption algorithm, I developed two libraries: one for bitwise
+    file reading and writing (<a href="#bitfile">bitfile</a>), and the
+    other for manipulating arbitrary length arrays of bits
+    (<a href="../bitarray.html">bitarray</a>).</p>
+
+    <p>Some time ago I was asked to modify my
+    <a href="../lzss.html">LZSS</a> implementation so it could be
+    used on a SEGA Genesis without a file system, so I developed a bitwise
+    array reading and writing library (arraystream).  Arraystream is very
+    similar to bitfile, with the major exception being that it operates on
+    arrays.</p>
+
+    <p>I originally wrote the bitfile library in ANSI C, because I used C
+    for my compression algorithms.  However, this library was one of just a
+    few things that I ever wrote (I've written a lot) where I thought that I
+    could do a better job with C++.  So I developed C++ implementations of my
+    bitfile library.  For the time being, the arraystream library is exclusively
+    available in C.</p>
+
+    <p>I've been using <a href="http://www.python.org">Python</a> when I've
+    needed quick hacks to do something on a PC (vs an embedded system).  After
+    doing some searching of <a href="http://pypi.python.org/pypi">PYPI</a>, the
+    Python Package Index, I noticed there were a number of Python packages
+    that were similar to my bitarray library, but there wasn't anything that
+    provided all the functionality of my bitfile library.  I had to fix
+    that problem by providing a pure Python version of my bitfile library too.
+    </p>
+
+    <p>I am publishing all of these libraries under the
+    <a href="http://www.gnu.org/licenses/licenses.html#LGPL">GNU LGPL</a>
+    in hopes that they will be of use to other people.</p>
+
+    <p>The rest of this page discusses each of my libraries.</p>
+
+    <p>Michael Dipperstein<br>
+    <a href="mailto:mdipper@alumni.engr.ucsb.edu">
+    mdipper@alumni.engr.ucsb.edu</a></p>
+
+    <hr style="width:100%;">
+
+    <a NAME="bitfile"></a><h2>Bitfile Library Overview</h2>
+    <h3>Implementation</h3>
+    <p>Each version of the bitfile library provides a wrapper around the
+    language's native file I/O.  The ANSI C version uses file I/O
+    functions and every bitfile is referenced by a structure which includes
+    a <code>FILE</code> pointer.</p>
+
+    <p>The arraystream library uses a similar structure, replacing the
+    <code>FILE</code> pointer with a pointer to an array of unsigned characters
+    and an array index.  Arraystream operations are analogous to bitfile
+    operations in almost all respects and will not be discussed further.</p>
+
+    <p>The C++ version of the bitfile library makes use of (but does not
+    inherit from) the <code>ifstream</code> and <code>ofstream</code> classes.
+    Every bit file object contains an <code>ifstream</code> pointer and
+    <code>ofstream</code> pointer.</p>
+
+    <p>The Python version implements a class containing a Python file
+    object.</p>
+
+    <p>In addition to a reference to a native file, each library includes
+    an 8-bit buffer, and counter responsible for tracking the number of
+    bits in the 8-bit buffer.  The C and C++ versions of the bitfile
+    library use an <code>unsinged char</code> for the 8-bit buffer.</p>
+
+    <h4>Reading Bits</h4>
+    <p>Reading bits from a bitfile works as follows:<br>
+
+    <strong>Step 1.</strong> Read a byte from the underlying file and store it
+    in the 8-bit buffer.<br>
+
+    <strong>Step 2.</strong> Set the count of bits in the buffer to 8.<br>
+
+    <strong>Step 3.</strong> Report the least significant bit (lsb) in the
+    buffer as the bit read.<br>
+
+    <strong>Step 4.</strong> Shift the buffer right by one bit.<br>
+
+    <strong>Step 5.</strong> Decrement the count of bits in the buffer.</p>
+
+    <p>To read an additional bit, repeat the process from
+    <strong>Step 3</strong>.  Once all bits are read from the 8-bit buffer
+    (the count equals 0) the process starts over from <strong>Step 1</strong>.
+    </p>
+
+    <h4>Writing Bits</h4>
+    <p>Writing bits to a bitfile works as follows:<br>
+
+    <strong>Step 1.</strong> Left shift the 8-bit buffer by one bit.<br>
+
+    <strong>Step 2.</strong> Set the least significant bit (lsb) of the 8-bit
+    buffer to the value of the bit being written.<br>
+
+    <strong>Step 3.</strong> Increment the count of bits in the 8-bit buffer.
+    </p>
+
+    <p>Repeat the process from <strong>Step 1</strong> for each additional bit.
+    Once 8 bits have been written to the 8-bit buffer, the buffer is written to
+    the underlying file and the bit count is set to 0.</p>
+
+    <p>I have incorporated some short cuts that bypass the 8-bit buffer in the
+    functions that read/write characters or bytes.</p>
+
+    <h2>Documentation</h2>
+    <p>Doxygen generated documentation of the ANSI C version of my bitfile
+    library may be found in my repository's
+    <a href="https://michaeldipperstein.github.io/bitfile/">
+    docs directory</a></p>
+
+    <p>The Python version of the bitfile library includes comments in docstring
+    format.</p>
+
+    <p>For the time being, there is no formal documentation for the C++
+    version of the bitfile library or the arraystream library.  Feel free to
+    generate some and send it to me.</p>
+
+    <h3>Usage</h3>
+    <p>I have included a file named sample.[c|cpp|py] which demonstrates the
+    usage of each function in the bitfile library and serves as a test to
+    verify the correctness of the code.</p>
+
+    <h3>Download</h3>
+    <p>A repository containing the source for each bitfile library may be
+    downloaded by clicking on the links below.  My source has been released
+    under the
+    <a href="http://www.gnu.org/licenses/licenses.html#LGPL">GNU LGPL</a>.
+    The source code repository is available on
+    <a href="http://www.github.com">GitHub</a>.  I recommend that you checkout
+    the latest revision of the master branch, unless you're looking for
+    something specific.</p>
+
+    <table summary="GitHub Repositories">
+      <tr>
+        <th valign="top" align="left">C Version</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/bitfile">
+            https://github.com/michaeldipperstein/bitfile
+          </a>
+        </th>
+      </tr>
+
+      <tr>
+        <th valign="top" align="left">&nbsp;</th>
+        <th valign="top" align="left">
+          <a href="https://michaeldipperstein.github.io/bitfile/">
+            Documentation
+          </a>
+        </th>
+      </tr>
+
+      <tr>
+        <th valign="top" align="left">C++ Version</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/bitfile-cpp">
+            https://github.com/michaeldipperstein/bitfile-cpp
+          </a>
+        </th>
+      </tr>
+
+      <tr>
+        <th valign="top" align="left">Python Version</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/bitfile-py">
+            https://github.com/michaeldipperstein/bitfile-py
+          </a>
+        </th>
+      </tr>
+    </table>
+
+    <hr style="width:100%;">
+
+    <p>My latest implementations of <a href="./huffman.html">Huffman</a>,
+    <a href="./lzss.html">LZSS</a>, <a href="./lzw.html">LZW</a>,
+    and <a href="./arithmetic.html">arithmetic</a> encoding all provide
+    additional examples of how to use the C version of the bitfile library.  If
+    you still have any questions or comments feel free to e-mail me at
+    <a href="mailto:mdipper@alumni.engr.ucsb.edu">mdipper@alumni.engr.ucsb.edu
+    </a>.</p>
+</div><!-- ends main-->
+
+</div><!--container1-->
+</div><!--container2-->
+
+<p><a href="./index.html">Home</a><br>
+Last updated on <em>August 3, 2017</em></p>
+
+</body>
+</html>
