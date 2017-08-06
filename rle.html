@@ -4,7 +4,7 @@
 <html>
 <head>
 <title>Run Length Encoding (RLE) Discussion and Implementation</title>
-<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="generator" content="quanta">
 <meta name="keywords" content="Run Length Encoding RLE Source PackBits">
 <link rel="stylesheet" href="./twocol.css" type="text/css">
@@ -55,8 +55,8 @@
         width="125" height="72">
     </a><br>
 
-    <a href="http://validator.w3.org/check?uri=referer">
-        <img src="http://www.w3.org/Icons/valid-html401"
+    <a href="https://validator.w3.org/check?uri=referer">
+        <img src="https://www.w3.org/Icons/valid-html401"
         alt="Valid HTML 4.01 Strict" height="31" width="88">
     </a>
 </div><!-- ends navbar-->
@@ -448,27 +448,25 @@
     <hr style="width:100%;">
 
     <h2>Further Information</h2>
-    <p>Further discussion of RLE with links to other documentation and libraries
-    may be found at
-    <a href="http://www.datacompression.info/RLE.shtml">
-    datacompression.info</a>.</p>
+    <p>As usual, I found Arturo Campos' discussion to be a help.  Unfortunately
+    all that is left of it is the
+    <a href="https://web.archive.org/web/20160312231337/http://www.arturocampos.com/ac_rle.html">
+    wayback machine archive</a>.</p>
 
-    <p>As usual, I found
-    <a href="http://www.arturocampos.com/ac_rle.html">
-    Arturo Campos'</a> discussion to be a help.</p>
-
-    <p>Take a look at Apple's
-    <a href="http://developer.apple.com/technotes/tn/tn1023.html">
-    Technical Note TN</a> for a description of the PackBits algorithm.</p>
+    <p>Take a look at Apple's Technical Note TN1023 for a description of the
+    PackBits algorithm.  Unfortunately all that is left of the technical note is
+    the
+    <a href="https://web.archive.org/web/20080705155158/http://developer.apple.com/technotes/tn/tn1023.html">
+    wayback machine archive</a> too.</p>
 
     <hr style="width:100%;">
 
     <a name="download"></a>
     <h2>Actual Software</h2>
     <p>I am releasing my implementations of run length encoding (RLE) under the
-    <a href="http://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
+    <a href="https://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
     The source code repository is available on
-    <a href="http://www.github.com">GitHub</a>.  I recommend that you checkout
+    <a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
     the latest revision of the master branch, unless you're looking for
     something specific.</p>
 
@@ -483,92 +481,13 @@
       </tr>
     </table>
 
-    <p>I am releasing my implementations of run length encoding (RLE) under the
-    <a href="http://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
-    As I add enhancements or fix bugs, I will post them here as newer versions.
-    The larger the version number, the newer the version.  I will retain
-    the older versions for historical reasons.  I recommend that most
-    people download the newest version unless there is a compelling reason
-    to do otherwise.</p>
-
-    <p>Each version is contained in its own zipped archive which includes
-    the source files and brief instructions for building an executable.
-    None of the archives contain executable programs.  A copy of the
-    archives may be obtained by clicking on the links below.</p>
-
-    <table summary="Releases">
-        <tr style="font-weight: bold;">
-            <td valign="top">Version</td>
-            <td valign="top">Comment</td>
-        </tr>
-
-        <tr>
-            <td valign="top"><a href="rle-0.4.zip">Version&nbsp;0.4</a></td>
-            <td>Changed the API so that encode and decode routines accept opened
-            file streams instead of file names.</td>
-        </tr>
-
-        <tr>
-            <td valign="top">&nbsp;</td>
-            <td>Changed return value to 0 for success and -1 for failure with
-            reason in errno.</td>
-        </tr>
-
-        <tr>
-            <td>&nbsp;</td>
-            <td>Upgrade to latest <a href="../optlist/index.html">optlist</a>
-            and <a href="../bitfile/index.html">bitfile</a> libraries.</td>
-        </tr>
-
-        <tr>
-            <td>&nbsp;</td>
-            <td>Written with tighter adherence to Michael Barr's
-            <a href="http://www.barrgroup.com/webinars/10rules">Top 10
-            Bug-Killing Coding Standard Rules</a>.</td>
-        </tr>
-
-        <tr>
-            <td valign="top"><a href="rle-0.3.zip">Version&nbsp;0.3</a></td>
-            <td>Fixes bug for max length runs in the variant of the packbits
-            algorithm.</td>
-        </tr>
-
-        <tr>
-            <td valign="top">&nbsp;</td>
-            <td>Replaces getopt with my <a href="../optlist/index.html">optlist
-            library</a>.</td>
-        </tr>
-
-        <tr>
-            <td valign="top">&nbsp;</td>
-            <td>Explicitly license the library under
-            <a href="http://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>
-            version 3.</td>
-        </tr>
-
-        <tr>
-            <td valign="top"><a href="rle-0.2.zip">Version&nbsp;0.2</a></td>
-            <td>Includes a variant of the packbits algorithm.</td>
-        </tr>
-
-        <tr>
-            <td valign="top"><a href="rle-0.1.zip">Version&nbsp;0.1</a></td>
-            <td>Initial release.</td>
-        </tr>
-
-        <tr>
-            <td valign="top">&nbsp;</td>
-            <td>Does not include any packbits style encoding.</td>
-        </tr>
-    </table>
-
     <hr style="width:100%;">
 
     <h3>Portability</h3>
     <p>All the source code that I have provided is written in strict ANSI C.  I
     would expect it to build correctly on any machine with an ANSI C compiler.
     I have tested the code compiled with gcc on Linux and
-    <a href="../free.html#gcc">mingw</a> on Windows XP.</p>
+    mingw on Windows XP.</p>
 
     <p>If you have any further questions or comments, you may contact me by
     e-mail.  My e-mail address is:

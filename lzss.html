@@ -4,7 +4,7 @@
 <html>
 <head>
 <title>LZSS (LZ77) Discussion and Implementation</title>
-<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="generator" content="quanta">
 <meta name="keywords" content="LZSS LZ77 Lempel Ziv Code Compression">
 <link rel="stylesheet" href="./twocol.css" type="text/css">
@@ -55,8 +55,8 @@
         width="125" height="72">
     </a><br>
 
-    <a href="http://validator.w3.org/check?uri=referer">
-        <img src="http://www.w3.org/Icons/valid-html401"
+    <a href="https://validator.w3.org/check?uri=referer">
+        <img src="https://www.w3.org/Icons/valid-html401"
         alt="Valid HTML 4.01 Strict" height="31" width="88">
     </a>
 </div><!-- ends navbar-->
@@ -220,12 +220,6 @@
     <strong>Step 5.</strong> Repeat from Step 2, until all the entire input has
     been decoded.</p>
 
-    <h2>Further Information</h2>
-    <p>Further discussion of LZSS with links to other documentation and
-    libraries may be found at
-    <a href="http://datacompression.info/LZSS.shtml">
-    http://datacompression.info/LZSS.shtml</a>.</p>
-
     <hr style="width:100%;">
 
     <h2>Implementation Issues</h2>
@@ -350,7 +344,7 @@
     <p>The addition of code implementing the KMP algorithm is a
     relatively new one (version 0.6.1).  By the time I got around to
     including it
-    <a href="http://en.wikipedia.org/wiki/Knuth-Morris-Pratt_algorithm">
+    <a href="https://en.wikipedia.org/wiki/Knuth-Morris-Pratt_algorithm">
     Wikipedia</a> had a reasonable description as well as pseudocode that
     I could reference.</p>
 
@@ -469,7 +463,7 @@
     <p>The source code implementing the KMP algorithm is contained in the
     file <tt>kmp.c</tt>.  The majority of the code follows the outline of
     the pseudocode provided by
-    <a href="http://en.wikipedia.org/wiki/Knuth-Morris-Pratt_algorithm">
+    <a href="https://en.wikipedia.org/wiki/Knuth-Morris-Pratt_algorithm">
     Wikipedia</a>.</p>
 
     <a name="linked_list"></a>
@@ -536,12 +530,13 @@
     needed a key that would distribute <em>M</em> long strings fairly evenly
     through the hash table.  Rather than inventing and testing a new key
     algorithm, I chose the key generation method discussed in K. Sadakane and
-    H. Imai:<a href="http://www.dais.is.tohoku.ac.jp/~sada/papers/SadIma00c.ps.gz">
+    H. Imai:
+    <a href="https://pdfs.semanticscholar.org/956d/e955607e92e33151db4216b93e51226f2b87.pdf">
     Improving the Speed of LZ77 Compression by Hashing and Suffix Sorting</a>,
     IEICE Trans. Fundamentals, Vol. E83-A, No. 12, pp. 2689--2798, 2000.
     The key algorithm is supposed to be the same algorithm used by
-    <a href="http://www.gzip.org">gzip</a> and may be implemented
-    using the following C fragment:</p>
+    <a href="http://www.gzip.org">gzip</a> and may be implemented using the
+    following C fragment:</p>
 
     <p><code>
     key = 0;<br>
@@ -604,7 +599,7 @@
     the last characters encoded by the algorithm, the binary search tree
     must be updated as old characters are removed from the dictionary and
     new characters are added to the dictionary.
-    <a href="http://en.wikipedia.org/wiki/Binary_search_tree">Wikipedia</a>
+    <a href="https://en.wikipedia.org/wiki/Binary_search_tree">Wikipedia</a>
     provides a description of the algorithm used to insert or remove
     entries from a binary search tree.
 
@@ -701,14 +696,14 @@
     <a name="download"></a>
     <h2>Actual Software</h2>
     <p>I am releasing my implementations of the LZSS algorithm under the
-    <a href="http://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
+    <a href="https://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
     If you've actually read this page to get all the way down here, you
     already know that I have different implementations.  In general earlier
     versions are simpler (maybe easier to follow) and later versions are easier
     to use as libraries and better suited for projects taking advantage of the
     LGPL.  In some cases later version add new new search methods or fix minor
     bugs.  All versions of my source code is available on
-    <a href="http://www.github.com">GitHub</a>.  I recommend that you checkout
+    <a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
     the latest revision if you're not looking for something specific.</p>
 
     <table summary="GitHub Repositories">
