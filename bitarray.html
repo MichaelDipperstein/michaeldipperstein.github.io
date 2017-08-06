@@ -1,0 +1,302 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+<title>Bit Array Libraries</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="generator" content="quanta">
+<meta name="keywords" content="bitwise operations files compression encryption">
+<meta name="keywords" content="bitvector bitfile class library">
+<link rel="stylesheet" href="./twocol.css" type="text/css">
+</head>
+
+<body>
+
+<div id="container2">
+<div id="container1">
+
+<div id="navbar">
+    <h1>Project Index</h1>
+    <hr style="width:90%;text-align: center;">
+
+    <p><a href="./index.html">Home</a></p>
+
+    <h2>Compression</h2>
+    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
+    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
+    <a href="./delta.html">Delta Coding</a><br>
+    <a href="./freq.html">Frequency Substitution</a><br>
+    <a href="./huffman.html">Huffman Coding</a><br>
+    <a href="./lzss.html">LZSS Coding</a><br>
+    <a href="./lzw.html">LZW Coding</a><br>
+    <a href="./rice.html">Rice (Golomb) Coding</a><br>
+    <a href="./rle.html">Run Length Encoding</a></p>
+
+    <h2>Misc. Programming</h2>
+    <p><a href="./projects.html">School Projects</a><br>
+    <a href="./mltp.html">Thesis Project</a><br>
+    <a href="./crypt.html">crypt(3) Source</a><br>
+    <a href="./hamming.html">Hamming Codes</a><br>
+    <a href="./bitarray.html">Bit Array Libraries</a><br>
+    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
+    <a href="./sqrt.html">Square Root Approximation Library</a><br>
+    <a href="./sort.html">Sort Library</a><br>
+    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
+    <a href="./optlist.html">Command Line Option Parser</a><br>
+    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
+    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
+    <a href="./ezini.html">INI File Parser and Creator</a></p>
+
+    <hr style="width:90%;text-align: center;">
+
+    <h1>Obligatory Links</h1>
+    <a href="http://counter.li.org/">
+        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
+        width="125" height="72">
+    </a><br>
+
+    <a href="https://validator.w3.org/check?uri=referer">
+        <img src="https://www.w3.org/Icons/valid-html401"
+        alt="Valid HTML 4.01 Strict" height="31" width="88">
+    </a>
+</div><!-- ends navbar-->
+
+<div id="main">
+    <div id="header">
+        <h1>Bit Array Libraries</h1>
+    </div>
+
+    <hr style="width:100%;">
+
+    <p>For some reason I keep finding myself dabbling in the worlds of
+    compression and encryption.  I'm not an expert in either of these
+    areas, nor do I aspire to become one.  It's just something that catches
+    my interest from time to time.</p>
+
+    <p>On computers, both compression and encryption usually take bit
+    patterns with a given meaning and translate them to other patterns
+    intended to have the same meaning.  This typically means having to
+    read, write, and manipulate arbitrary groups of bits.  To save myself
+    from reinventing the wheel every time I played with another compression
+    or encryption algorithm, I developed two libraries: one for bitwise
+    file reading and writing (<a href="./bitfile.html">bitfile</a>), and
+    the other for manipulating arbitrary length arrays of bits
+    (<a href="#bitarray">bitarray</a>).</p>
+
+    <p>I originally wrote the bitarray library in ANSI C, because I used C for
+    my compression algorithms.  However, this libraries were one of just a few
+    things that I ever wrote (I've written a lot) where I thought that I could
+    do a better job with C++.  So I developed C++ implementation.  Of course
+    somewhere along the way the Standard Template Library (STL) was added to
+    C++ and you can do much of what the bit array library does with a
+    <code>vector</code> of <code>bit</code>.</p>
+
+    <p>I am publishing both of these libraries under the
+    <a href="https://www.gnu.org/licenses/licenses.html#LGPL">GNU LGPL</a>
+    in hopes that they will be of use to other people.</p>
+
+    <p>The rest of this page discusses each of my libraries.</p>
+
+    <p>Michael Dipperstein<br>
+    <a href="mailto:mdipper@alumni.engr.ucsb.edu">
+    mdipper@alumni.engr.ucsb.edu</a></p>
+
+    <hr style="width:100%;">
+
+    <a name="bitarray"></a><h2>Bitarray Library Overview</h2>
+    <h3>Implementation</h3>
+    <p>The ANSI C bitarray library provides a collection of functions that
+    create and operate on arrays of bits.  The ISO C++ bitarray library
+    provides a class with methods that perform similar functions.  Modern
+    versions of the C++ STL provide <code>vector&lt;bool&gt;</code> and
+    <code>bitset</code> for similar functionality.  My C++ implementation
+    doesn't use the C++ STL.</p>
+
+    <p>Bitarrays may be of any size and are implemented as arrays of
+    <code>unsigned char</code>.  Bit 0 of the most significant
+    <code>unsigned char</code> (char 0) is the most significant bit (msb) of
+    the bit array.  The last (non-spare) bit of the last
+    <code>unsigned char</code> is the least significant bit (lsb).</p>
+
+    <p><strong>Example:</strong><br>
+    An array of 20 bits (0 through 19) with 8 bit <code>unsigned char</code>s
+    requires 3 <code>unsigned char</code>s (0 through 2) to store all the bits.
+    </p>
+
+    <table summary="Bit Positions">
+        <tr>
+            <td>char</td>
+            <td colspan="8" style="text-align: center;">0</td>
+            <td colspan="8" style="text-align: center;">1</td>
+            <td colspan="8" style="text-align: center;">2</td>
+        </tr>
+        <tr>
+            <td>&nbsp;</td>
+            <td colspan="8" style="border: 1px solid black;">&nbsp;</td>
+            <td colspan="8" style="border: 1px solid black;">&nbsp;</td>
+            <td colspan="8" style="border: 1px solid black;">&nbsp;</td>
+        </tr>
+        <tr>
+            <td rowspan="2">bit</td>
+            <td colspan="10"></td>
+            <td>1</td>
+            <td>1</td>
+            <td>1</td>
+            <td>1</td>
+            <td>1</td>
+            <td>1</td>
+            <td>1</td>
+            <td>1</td>
+            <td>1</td>
+            <td>1</td>
+            <td>X</td>
+            <td>X</td>
+            <td>X</td>
+            <td>X</td>
+        </tr>
+        <tr>
+            <td>0</td>
+            <td>1</td>
+            <td>2</td>
+            <td>3</td>
+            <td>4</td>
+            <td>5</td>
+            <td>6</td>
+            <td>7</td>
+            <td>8</td>
+            <td>9</td>
+            <td>0</td>
+            <td>1</td>
+            <td>2</td>
+            <td>3</td>
+            <td>4</td>
+            <td>5</td>
+            <td>6</td>
+            <td>7</td>
+            <td>8</td>
+            <td>9</td>
+            <td>X</td>
+            <td>X</td>
+            <td>X</td>
+            <td>X</td>
+        </tr>
+    </table>
+
+    <p>The array data is contained inside a structure/class which includes a
+    count of the number of bits in the array, and a pointer to the memory
+    storing the array.  Since arrays may be of arbitrary size, the memory
+    storing the array is dynamically allocated on the heap.</p>
+
+    <p>The C++ bitarray class overloads bitwise operators (&amp;, |, ^, ...),
+    providing the expected results on bitarray objects.  The C bitarray
+    library provides functions (BitArrayAnd, BitArrayOr, BitArrayXor, ...)
+    for similar functionality.</p>
+
+    <p>I have written the bitarray library so that functions and methods
+    requiring multiple bit arrays (such as BitArrayAnd or &amp;), will not
+    do anything if they are given arrays of differing sizes to operate on.
+    </p>
+
+    <p>With native arrays, square brackets (<code>[]</code>) may be used to
+    either obtain the value of an array element
+    <a href="#case1"><sup>1</sup></a>, or to obtain a pointer to an array
+    location <a href="#case2"><sup>2</sup></a>.</p>
+
+    <p>
+    <a name="case1">case 1:</a><br>
+    <code>if (array[index] == value)</code> ...<br><br>
+
+    <a name="case2">case 2:</a><br>
+    <code>array[index] = value;</code><br>
+    </p>
+
+    <p>Unfortunately I have not found a way to do anything close to this
+    with bitarrays in C.</p>
+
+    <p>In C++ it's not possible to overload square brackets (<code>[]</code>)
+    to behave both ways.  Consequently square brackets (<code>[]</code>)
+    returns a bit value and parenthesis (<code>()</code>) returns a class that
+    behaves as a pointer to a bit in the array.  The class returned by
+    parenthesis (<code>()</code>) may only be used for assigning bit values.</p>
+
+    <h3>Usage</h3>
+    <p>A description of each of the functions in my C bitarray library may be
+    found <a href="https://michaeldipperstein.github.io/bitarray/">here</a>,
+    unfortunately, I have't written a similar description for the C++ bitarray
+    library.  Both the C and C++ bitarray library source archives also include
+    detailed headers preceding each function, and I have included a file named
+    sample.[c|cpp] which demonstrates the usage of each function in the
+    bitarray library.</p>
+
+    <h3>Portability</h3>
+    <p>All the source code that I have provided is written in strict ANSI C
+    or ISO C++.  I would expect it to build correctly on any machine with
+    ANSI C/ISO C++ compilers.  I have tested the code compiled with gcc
+    on Linux on an Intel x86 and mingw on Windows XP.</p>
+
+    <p>The library includes the routines intended for debugging which dump
+    the array contents to a display.  These routines assume that
+    <code>unsigned char</code>s are 8 bits.  These routines can easily be
+    written to support any specific size unsigned character.  Writing
+    the dump routines to handle arbitrary size <code>unsigned char</code> seems
+    more difficult than it is worth to me.  Especially since I only have
+    access to machines with 8 bit <code>unsigned char</code>s.</p>
+
+    <h3>Download</h3>
+    <p>A repository containing the source for each bitfile library may be
+    downloaded by clicking on the links below.  My source has been released
+    under the
+    <a href="https://www.gnu.org/licenses/licenses.html#LGPL">GNU LGPL</a>.
+    The source code repository is available on
+    <a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
+    the latest revision of the master branch, unless you're looking for
+    something specific.</p>
+
+    <table summary="GitHub Repositories">
+      <tr>
+        <th valign="top" align="left">C Version</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/bitarray">
+            https://github.com/michaeldipperstein/bitarray
+          </a>
+        </th>
+      </tr>
+
+      <tr>
+        <th valign="top" align="left">&nbsp;</th>
+        <th valign="top" align="left">
+          <a href="https://michaeldipperstein.github.io/bitarray/">
+            Documentation
+          </a>
+        </th>
+      </tr>
+
+      <tr>
+        <th valign="top" align="left">C++ Version</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/array-cpp">
+            https://github.com/michaeldipperstein/bitarray-cpp
+          </a>
+        </th>
+      </tr>
+    </table>
+
+    <hr style="width:100%;">
+
+    <p>My latest implementations of <a href="./huffman.html">Huffman codes</a>
+    provides an additional example of how to use the C version of these
+    libraries.  If you still have any questions or comments feel free to
+    e-mail me at
+    <a href="mailto:mdipper@alumni.engr.ucsb.edu">mdipper@alumni.engr.ucsb.edu
+    </a>.</p>
+</div><!-- ends main-->
+
+</div><!--container1-->
+</div><!--container2-->
+
+<p><a href="./index.html">Home</a><br>
+Last updated on <em>August 6, 2017</em></p>
+
+</body>
+</html>

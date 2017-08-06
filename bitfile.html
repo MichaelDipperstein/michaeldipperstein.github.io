@@ -82,10 +82,10 @@
     or encryption algorithm, I developed two libraries: one for bitwise
     file reading and writing (<a href="#bitfile">bitfile</a>), and the
     other for manipulating arbitrary length arrays of bits
-    (<a href="../bitarray.html">bitarray</a>).</p>
+    (<a href="./bitarray.html">bitarray</a>).</p>
 
     <p>Some time ago I was asked to modify my
-    <a href="../lzss.html">LZSS</a> implementation so it could be
+    <a href="./lzss.html">LZSS</a> implementation so it could be
     used on a SEGA Genesis without a file system, so I developed a bitwise
     array reading and writing library (arraystream).  Arraystream is very
     similar to bitfile, with the major exception being that it operates on
@@ -201,7 +201,7 @@
     verify the correctness of the code.</p>
 
     <h3>Download</h3>
-    <p>A repository containing the source for each bitfile library may be
+    <p>A repository containing the source for each bitarray library may be
     downloaded by clicking on the links below.  My source has been released
     under the
     <a href="https://www.gnu.org/licenses/licenses.html#LGPL">GNU LGPL</a>.
@@ -246,11 +246,20 @@
           </a>
         </th>
       </tr>
+
+      <tr>
+        <th valign="top" align="left">Array Stream</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/arraystream">
+            https://github.com/michaeldipperstein/arraystream
+          </a>
+        </th>
+      </tr>
     </table>
 
     <hr style="width:100%;">
 
-    <p>My latest implementations of <a href="./huffman.html">Huffman</a>,
+    <p>My latest implementations of <a href="./huffman.html">Huffman codes</a>,
     <a href="./lzss.html">LZSS</a>, <a href="./lzw.html">LZW</a>,
     and <a href="./arithmetic.html">arithmetic</a> encoding all provide
     additional examples of how to use the C version of the bitfile library.  If
