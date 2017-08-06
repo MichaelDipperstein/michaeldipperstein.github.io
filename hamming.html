@@ -1,0 +1,1784 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+<title>Hamming (7,4) Code Discussion and Implementation</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="generator" content="quanta">
+<meta name="author" content="Michael Dipperstein">
+<meta name="keywords" content="Hamming (7,4) encode decode bit error">
+<meta name="description" content="Hamming code description and implementation">
+<link rel="stylesheet" href="./twocol.css" type="text/css">
+<style type="text/css">
+
+.matrix
+{
+    font-family: monospace;
+    position: relative;
+    overflow: auto;
+}
+
+.matrix table
+{
+    border-style: none;
+    border-collapse: collapse;
+    border-color: black;
+    text-indent: 0.5pc;
+}
+
+.matrix td
+{
+    white-space: nowrap;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="container2">
+<div id="container1">
+
+<div id="navbar">
+    <h1>Project Index</h1>
+    <hr style="width:90%;text-align: center;">
+
+    <p><a href="./index.html">Home</a></p>
+
+    <h2>Compression</h2>
+    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
+    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
+    <a href="./delta.html">Delta Coding</a><br>
+    <a href="./freq.html">Frequency Substitution</a><br>
+    <a href="./huffman.html">Huffman Coding</a><br>
+    <a href="./lzss.html">LZSS Coding</a><br>
+    <a href="./lzw.html">LZW Coding</a><br>
+    <a href="./rice.html">Rice (Golomb) Coding</a><br>
+    <a href="./rle.html">Run Length Encoding</a></p>
+
+    <h2>Misc. Programming</h2>
+    <p><a href="./projects.html">School Projects</a><br>
+    <a href="./mltp.html">Thesis Project</a><br>
+    <a href="./crypt.html">crypt(3) Source</a><br>
+    <a href="./hamming.html">Hamming Codes</a><br>
+    <a href="./bitarray.html">Bit Array Libraries</a><br>
+    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
+    <a href="./sqrt.html">Square Root Approximation Library</a><br>
+    <a href="./sort.html">Sort Library</a><br>
+    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
+    <a href="./optlist.html">Command Line Option Parser</a><br>
+    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
+    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
+    <a href="./ezini.html">INI File Parser and Creator</a></p>
+
+    <hr style="width:90%;text-align: center;">
+
+    <h1>Obligatory Links</h1>
+    <a href="http://counter.li.org/">
+        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
+        width="125" height="72">
+    </a><br>
+
+    <a href="https://validator.w3.org/check?uri=referer">
+        <img src="https://www.w3.org/Icons/valid-html401"
+        alt="Valid HTML 4.01 Strict" height="31" width="88">
+    </a>
+</div><!-- ends navbar-->
+
+<div id="main">
+    <div id="header">
+        <h1>Hamming (7,4) Code Discussion and Implementation</h1>
+        <h3>by Michael Dipperstein</h3>
+    </div>
+
+    <hr style="width:100%;">
+
+    <p>It happened again.  I came across another algorithm that I had to
+    investigate, implement, and publish my implementation of.  This time the
+    catalyst was my paying job.  One of the systems I'm working with is quite
+    noisy, and the customer is using a Hamming code to limit the effects of the
+    noise.</p>
+
+    <p>I was given a spec with a table that showed how the 7 bit codes that my
+    device received should be converted into 4 bit data.  The document stated
+    that the table decoded a Hamming (7, 4) code.  That was it.  There was no
+    more explanation of where the table came from or why it made things any
+    better?  I spent some of my &quot;spare&quot; time learning the answers to
+    those questions.</p>
+
+    <p>As with my other libraries, my intent is to publish an easy to follow
+    ANSI C implementation.  Anyone familiar with ANSI C and the Hamming
+    encoding/decoding algorithms should be able to follow and learn from my
+    implementation.</p>
+
+    <p>Information on downloading the source code for all of my Hamming encoding
+    and decoding implementations may be found <a href="#download">here</a>.</p>
+
+    <p>The rest of this page discusses the basics of Hamming codes and my
+    implementation.</p>
+
+    <hr style="width:100%;">
+
+    <h2>Algorithm Overview</h2>
+    <p>Around 1947 Richard W. Hamming developed technique for detecting and
+    correcting single bit errors in transmitted data.  His technique requires
+    that three <a href="#parity">parity</a> bits (or check bits) be transmitted
+    with every four data bits.  The algorithm is called a (7, 4) code, because
+    it requires seven bits to encoded four bits of data.</p>
+
+    <h3>Background Concepts</h3>
+    <p>In order to understand my implementation of Hamming codes, it helps to be
+    comfortable with the concepts of matrix multiplication, modulo 2 arithmetic,
+    and parity.  If you're already comfortable with these concepts, feel free to
+    skip ahead to the section on <a href="#encoding">encoding</a>.</p>
+
+    <h4>Matrix Multiplication</h4>
+    <p>This section isn't intended to be a complete course on linear algebra.
+    It's just a simple reminder on how matrices are multiplied.  In all truth,
+    I'm including it because I keep forgetting how it's done.</p>
+
+    <p>To start off with, you can't multiply two matrices together unless the
+    first matrix has a number of columns equal to the number of rows in the
+    second matrix.  If [A] and [B] are matrices [A] &times; [B] is only
+    meaningful if [A] is an i&times;j matrix (i rows and j columns) and [B] is
+    a j&times;k matrix (j rows and k columns).</p>
+
+    <p>Suppose [A] is the matrix:</p>
+
+    <div class="matrix">
+        <table summary="Matrix A">
+            <tbody>
+                <tr>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        a<sub>11</sub>
+                    </td>
+                    <td>
+                        a<sub>12</sub>
+                    </td>
+                    <td>
+                        &hellip;
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        a<sub>1j</sub>&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        a<sub>21</sub>
+                    </td>
+                    <td>
+                        a<sub>22</sub>
+                    </td>
+                    <td>
+                        &hellip;
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        a<sub>2j</sub>&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        &#x22EE;
+                    </td>
+                    <td>
+                        &#x22EE;
+                    </td>
+                    <td>
+                        &hellip;
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        &#x22EE;&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        a<sub>i1</sub>
+                    </td>
+                    <td>
+                        a<sub>i2</sub>
+                    </td>
+                    <td>
+                        &hellip;
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        a<sub>ij</sub>&nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>and [B] is the matrix:</p>
+
+    <div class="matrix">
+        <table summary="Matrix B">
+            <tbody>
+                <tr>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        b<sub>11</sub>
+                    </td>
+                    <td>
+                        b<sub>12</sub>
+                    </td>
+                    <td>
+                        &hellip;
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        b<sub>1k</sub>&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        b<sub>21</sub>
+                    </td>
+                    <td>
+                        b<sub>22</sub>
+                    </td>
+                    <td>
+                        &hellip;
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        b<sub>2k</sub>&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        &#x22EE;
+                    </td>
+                    <td>
+                        &#x22EE;
+                    </td>
+                    <td>
+                        &hellip;
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        &#x22EE;&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        b<sub>j1</sub>
+                    </td>
+                    <td>
+                        b<sub>j2</sub>
+                    </td>
+                    <td>
+                        &hellip;
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        b<sub>jk</sub>&nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>the result of [A] &times; [B] is an i&times;k matrix</p>
+
+    <div class="matrix">
+        <table summary="Matrix C">
+            <tbody>
+                <tr>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        c<sub>11</sub>
+                    </td>
+                    <td>
+                        c<sub>12</sub>
+                    </td>
+                    <td>
+                        &hellip;
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        c<sub>1k</sub>&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        c<sub>21</sub>
+                    </td>
+                    <td>
+                        c<sub>22</sub>
+                    </td>
+                    <td>
+                        &hellip;
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        c<sub>2k</sub>&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        &#x22EE;
+                    </td>
+                    <td>
+                        &#x22EE;
+                    </td>
+                    <td>
+                        &hellip;
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        &#x22EE;&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        c<sub>i1</sub>
+                    </td>
+                    <td>
+                        c<sub>i2</sub>
+                    </td>
+                    <td>
+                        &hellip;
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        c<sub>ik</sub>&nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>where:<br>
+    <code>c<sub>mn</sub> = (a<sub>m1</sub> &times; b<sub>1n</sub>) +
+    (a<sub>m2</sub> &times; b<sub>2n</sub>) + &hellip; +
+    (a<sub>mj</sub> &times; b<sub>jn</sub>)</code><br><br>
+    for m &le; i and n &le; k.
+    </p>
+
+    <a name="mod2"></a>
+    <h4>Modulo 2 Arithmetic</h4>
+    <p>If you can handle conventional arithmetic, modulo 2 arithmetic should be
+    an easy concept to handle.  Modulo 2 arithmetic is done in base 2 (binary),
+    so the only numerals are 0 and 1.  Since everything is modulo, there is no
+    carrying either.</p>
+
+    <p>Addition and multiplication are the only operators modulo 2 operators
+    that we really care about.  For maximum browser compatibility, I will
+    represent these operations with an ordinary plus (+) and multiplication
+    symbol (&times;).  I will try to note when + and &times; are not being used
+    as modulo 2 operators.</p>
+
+    <p>Modulo 2 addition works as follows:<br>
+    0 + 0 = 0<br>
+    0 + 1 = 1<br>
+    1 + 0 = 1<br>
+    1 + 1 = 0<br>
+    A + B = B + A<br>
+    A + B + C = (A + B) + C = A + (B + C)</p>
+
+    <p>Modulo 2 multiplication works as follows:<br>
+    0 &times; 0 = 0<br>
+    0 &times; 1 = 0<br>
+    1 &times; 0 = 0<br>
+    1 &times; 1 = 1<br>
+    A &times; B = B &times; A<br>
+    A &times; B &times; C = (A &times; B) &times; C = A &times; (B &times; C)
+    </p>
+
+    <p>Notice that modulo 2 addition functions just like a logical Exclusive OR
+    (XOR) and modulo 2 multiplication functions just like a logical AND.</p>
+
+    <a name="parity"></a>
+    <h4>Parity</h4>
+    <p>In computer science terms, parity comes in two varieties even and odd.  A
+    string of bits (1's and 0's) has even parity if it contains an even number
+    of 1's (the modulo 2 sum of the bits is 0), otherwise it has odd parity (the
+    modulo 2 sum of the bits is 1).  Many error detection schemes utilize parity
+    bits.  A parity bit is an extra bit that forces a binary string to have a
+    specific parity.  The parity bit for an even parity block may be computed by
+    summing all the bits modulo 2.  The parity bit for an odd parity block may be
+    computed by summing all the bits modulo 2 and adding 1.  The table below
+    lists all possible three bit values and value of a parity bit required to
+    create a four bit sequence with even parity.</p>
+
+    <a name="table1"></a>
+    <table style="margin-left:auto; margin-right:auto;"
+        cellpadding="1" cellspacing="1" border="1"
+        summary="Even Parity">
+        <caption style="caption-side:bottom;">
+            Table 1. Even Parity
+        </caption>
+        <tbody>
+            <tr>
+                <th>3 Bit String</th>
+                <th>Parity Bit</th>
+                <th>Verification</th>
+            </tr>
+            <tr>
+                <td>000</td>
+                <td>0</td>
+                <td>0 + 0 + 0 + 0 = 0</td>
+            </tr>
+            <tr>
+                <td>001</td>
+                <td>1</td>
+                <td>0 + 0 + 1 + 1 = 0</td>
+            </tr>
+            <tr>
+                <td>010</td>
+                <td>1</td>
+                <td>0 + 1 + 0 + 1 = 0</td>
+            </tr>
+            <tr>
+                <td>011</td>
+                <td>0</td>
+                <td>0 + 1 + 1 + 0 = 0</td>
+            </tr>
+            <tr>
+                <td>100</td>
+                <td>1</td>
+                <td>1 + 0 + 0 + 1 = 0</td>
+            </tr>
+            <tr>
+                <td>101</td>
+                <td>0</td>
+                <td>1 + 0 + 1 + 0 = 0</td>
+            </tr>
+            <tr>
+                <td>110</td>
+                <td>0</td>
+                <td>1 + 0 + 1 + 0 = 0</td>
+            </tr>
+            <tr>
+                <td>111</td>
+                <td>1</td>
+                <td>1 + 1 + 1 + 1 = 0</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>It is very common for communication protocols to specify that a block of
+    bits will be transmitted with a specific parity.  If a block of data arrives
+    at its intended destination with a parity other than the specified parity,
+    it must be the case that at least one of the bits has been corrupted.  A
+    single parity bit is not sufficient to identify an even number of errored
+    bits, nor is it sufficient to allow the receiver to correct an error.
+    Hamming codes use multiple parity bits to allow for error correction.</p>
+
+    <a name="encoding"></a>
+    <h3>Encoding</h3>
+    <p>Traditional Hamming codes are (7, 4) codes, encoding four bits of data
+    into seven bit blocks (a Hamming code word).  The extra three bits are
+    parity bits.  Each of the three parity bits are parity for three of the four
+    data bits, and no two parity bits are for the same three data bits.  All of
+    the parity bits are even parity.</p>
+
+    <a name="example1"></a>
+    <p><strong>Example:</strong><br>
+    Given: data bits d<sub>1</sub>, d<sub>2</sub>, d<sub>3</sub>, and
+    d<sub>4</sub><br>
+    A (7, 4) Hamming code may define parity bits p<sub>1</sub>, p<sub>2</sub>,
+    and p<sub>3</sub> as<br>
+    p<sub>1</sub> = d<sub>2</sub> + d<sub>3</sub> + d<sub>4</sub><br>
+    p<sub>2</sub> = d<sub>1</sub> + d<sub>3</sub> + d<sub>4</sub><br>
+    p<sub>3</sub> = d<sub>1</sub> + d<sub>2</sub> + d<sub>4</sub>
+    </p>
+
+    <p>There's a fourth equation for a parity bit that may be used in Hamming
+    codes:<br>
+    p<sub>4</sub> = d<sub>1</sub> + d<sub>2</sub> + d<sub>3</sub>
+    </p>
+
+    <p>Valid Hamming codes may use any three of the above four parity bit
+    definitions.  Valid Hamming codes may also place the parity bits in any
+    location within the block of 7 data and parity bits.  Two Hamming codes with
+    different parity bits or parity bits in a different bit position are
+    considered equivalent.  They will produce different results, but they are
+    still Hamming codes.</p>
+
+    <p>One method for transforming four bits of data into a seven bit Hamming
+    code word is to use a 4&times;7 generator matrix [G].</p>
+
+    <p>Define d to be the 1&times;4 vector [d<sub>1</sub> d<sub>2</sub>
+    d<sub>3</sub> d<sub>4</sub>]</p>
+
+    <p>It's possible to create a 4&times;7 generator matrix [G] such that the
+    product <a href="#mod2">modulo 2</a> of d and [G] (d[G]) is the desired
+    1&times;7 Hamming code word.  Here's how it's done:</p>
+
+    <p><strong>Step 1.</strong> Represent each data bit with a column vector as
+    follows:<br>
+
+    <div class="matrix">
+        <table summary="Matrix d1">
+            <tbody>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        d<SUB>1</SUB> =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <br>
+
+        <table summary="Matrix d2">
+            <tbody>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        d<SUB>2</SUB> =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <br>
+
+        <table summary="Matrix d3">
+            <tbody>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        d<SUB>3</SUB> =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <br>
+
+        <table summary="Matrix d4">
+            <tbody>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        d<SUB>4</SUB> =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p><strong>Step 2.</strong> Represent each parity bit with a column vector
+    containing a 1 in the row corresponding to each data bit included in the
+    computation and a zero in all other rows.  Using the parity bit definitions
+    from the <a href="#example1">example</a> above:</p>
+
+    <div class="matrix">
+        <table summary="Matrix p1">
+            <tbody>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        p<SUB>1</SUB> =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <br>
+
+        <table summary="Matrix p2">
+            <tbody>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        p<SUB>2</SUB> =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <br>
+
+        <table summary="Matrix p3">
+            <tbody>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        p<SUB>3</SUB> =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p><strong>Step 3.</strong> Create a generator matrix, [G], by arranging the
+    column vectors from the previous steps into a 4&times;7 matrix such that the
+    columns are ordered to match their corresponding bits in a code word.</p>
+
+    <p>To create a generator that produces code words with the bits ordered
+    p<sub>1</sub>, p<sub>2</sub>, p<sub>3</sub>, d<sub>1</sub>, d<sub>2</sub>,
+    d<sub>3</sub>, d<sub>4</sub> (3 parity bits followed by 4 data bits) use the
+    vectors from the previous steps and arrange them into the following columns
+    [p<sub>1</sub>&nbsp;p<sub>2</sub>&nbsp;p<sub>3</sub>&nbsp;d<sub>1</sub>&nbsp;d<sub>2</sub>&nbsp;d<sub>3</sub>&nbsp;d<sub>4</sub>]
+    </p>
+
+    <p>The results are following 4&times;7 generator matrix:</p>
+
+    <div class="matrix">
+        <table summary="Matrix G">
+            <tbody>
+                <tr>
+                    <th>
+                        &nbsp;
+                    </th>
+                    <th style="border-bottom-style: dotted; border-width: thin;">
+                        p<sub>1</sub>
+                    </th>
+                    <th style="border-bottom-style: dotted; border-width: thin;">
+                        p<sub>2</sub>
+                    </th>
+                    <th style="border-bottom-style: dotted; border-width: thin;">
+                        p<sub>3</sub>
+                    </th>
+                    <th style="border-bottom-style: dotted; border-width: thin;">
+                        d<sub>1</sub>
+                    </th>
+                    <th style="border-bottom-style: dotted; border-width: thin;">
+                        d<sub>2</sub>
+                    </th>
+                    <th style="border-bottom-style: dotted; border-width: thin;">
+                        d<sub>3</sub>
+                    </th>
+                    <th style="border-bottom-style: dotted; border-width: thin;">
+                        d<sub>4</sub>
+                    </th>
+                </tr>
+                <tr>
+                    <td colspan="8">
+                        &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        G =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Arranging the columns in any other order will just change the positions
+    of bits in the code word.</p>
+
+    <a name="example2"></a>
+    <p><strong>Example:</strong><br>
+    Encode the data value 1010 using the Hamming code defined by the matrix G
+    (above).</p>
+
+    <div class="matrix">
+        <table summary="encode example">
+            <tbody>
+                <tr>
+                    <td colspan="3">
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                    <td colspan="3">
+                        &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1 0 1 0&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                    <td>
+                        =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1 0 1 1 0 1 0&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="3">
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td colspan="2">
+                        | | | | | | |
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="3">
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td colspan="2">
+                        | | | | | | +-->(1 &times; 0) + (0 &times; 0) + (1 &times; 0) + (0 &times; 1)
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="11">
+                        &nbsp;
+                    </td>
+                    <td colspan="2">
+                        | | | | | +---->(1 &times; 0) + (0 &times; 0) + (1 &times; 1) + (0 &times; 0)
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="11">
+                        &nbsp;
+                    </td>
+                    <td colspan="2">
+                        | | | | +------>(1 &times; 0) + (0 &times; 1) + (1 &times; 0) + (0 &times; 0)
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="11">
+                        &nbsp;
+                    </td>
+                    <td colspan="2">
+                        | | | +-------->(1 &times; 1) + (0 &times; 0) + (1 &times; 0) + (0 &times; 0)
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="11">
+                        &nbsp;
+                    </td>
+                    <td colspan="2">
+                        | | +---------->(1 &times; 1) + (0 &times; 1) + (1 &times; 0) + (0 &times; 1)
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="11">
+                        &nbsp;
+                    </td>
+                    <td colspan="2">
+                        | +------------>(1 &times; 1) + (0 &times; 0) + (1 &times; 1) + (0 &times; 1)
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="11">
+                        &nbsp;
+                    </td>
+                    <td colspan="2">
+                        +-------------->(1 &times; 0) + (0 &times; 1) + (1 &times; 1) + (0 &times; 1)
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>So 1010 encodes to 1011010.  Equivalent Hamming codes represented by
+    different generator matrices will produce different results.</p>
+
+    <h3>Decoding</h3>
+    <p>In a world without errors decoding a Hamming code word would be very
+    easy.  Just throw out the parity bits.  The encoding
+    <a href="#example2">example</a> produced a 7 bit code word.  Its parity bits
+    are 101 and its data bits are 1010.  If you receive a 1011010, just decode
+    it as 1010.  But what happens if you receive a code word with an error and
+    one or more of the parity bits are wrong?</p>
+
+    <p>Suppose the Hamming code defined by the matrix G in the
+    <a href="#example2">example</a> above is being used and the code word
+    1011011 is received.  How is that word decoded?  The first step is to check
+    the parity bits to determine if there is an error.</p>
+
+    <p>Arithmetically, parity may be checked as follows:<br>
+    p<sub>1</sub> = d<sub>2</sub> + d<sub>3</sub> + d<sub>4</sub> = 0 + 1 + 1 = 0<br>
+    p<sub>2</sub> = d<sub>1</sub> + d<sub>3</sub> + d<sub>4</sub> = 1 + 1 + 1 = 1<br>
+    p<sub>3</sub> = d<sub>1</sub> + d<sub>2</sub> + d<sub>4</sub> = 1 + 0 + 1 = 0
+    </p>
+
+    <p>In this case every parity bit is wrong.  p<sub>1</sub>, p<sub>2</sub>, and
+    p<sub>3</sub> should have been 010, but we received 101.</p>
+
+    <p>Parity may also be validated using matrix operations.  A 3&times;7 parity
+    check matrix [H] may be constructed such that row 1 contains 1s in the
+    position of the first parity bit and all of the data bits that are included
+    in its parity calculation.  Row 2 contains 1s in the position of the second
+    parity bit and all of the data bits that are included in its parity
+    calculation.  Row 3 contains 1s in the position of the third parity bit and
+    all of the data bits that are included in its parity calculation.</p>
+
+    <a name="example3"></a>
+    <p><strong>Example:</strong><br>
+    Using the code  from <A HREF="#example2">example</A> above, the matrix H may
+    be defined as follows:</p>
+
+    <div class="matrix">
+        <table summary="Matrix H">
+            <tbody>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        H =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Multiplying the 3&times;7 matrix [H] by a 7&times;1 matrix representing
+    the encoded data produces a 3&times;1 matrix called the &quot;syndrome&quot;.
+    There are two useful proprieties of the syndrome.  If the syndrome is all
+    zeros, the encoded data is error free.  If the syndrome has a non-zero
+    value, flipping the encoded bit that is in the position of the column in
+    [H] that matches the syndrome will result in a valid code word.</p>
+
+    <a name="example4"></a>
+    <p><strong>Example:</strong><br>
+    Using the parity check matrix from the <a href="#example3">example</a> above
+    we can correct and verify the code word 1011011.</p>
+
+    <div class="matrix">
+        <table summary="Parity Check">
+            <tbody>
+                <tr>
+                    <td colspan="9">
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td colspan="4">
+                        &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="9">
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                    <td colspan="4">
+                        &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        (1 &times; 1) + (0 &times; 0) + (0 &times; 1) + (0 &times; 1) + (1 &times; 0) + (1 &times; 1) + (1 &times; 1)&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td>
+                        =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        (0 &times; 0) + (1 &times; 0) + (0 &times; 1) + (1 &times; 1) + (0 &times; 0) + (1 &times; 1) + (1 &times; 1)&nbsp;
+                    </td>
+                    <td>
+                        =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        (0 &times; 1) + (0 &times; 0) + (1 &times; 1) + (1 &times; 1) + (1 &times; 0) + (0 &times; 1) + (1 &times; 1)&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="9">
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td colspan="4">
+                        &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="9">
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td colspan="4">
+                        &nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>A column of all 1s is not the column of all 0s, so there is a parity
+    error.  Looking back at the matrix [H], you will see that the seventh column
+    is all 1s, so the seventh bit is the errored bit.  Changing the seventh bit
+    produces the code word 1011010.</p>
+
+    <div class="matrix">
+        <table summary="Corrected Code Word">
+            <tbody>
+                <tr>
+                    <td colspan="9">
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td colspan="4">
+                        &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="9">
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                    <td colspan="4">
+                        &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        (1 &times; 1) + (0 &times; 0) + (0 &times; 1) + (0 &times; 1) + (1 &times; 0) + (1 &times; 1) + (1 &times; 0)&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td>
+                        =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        (0 &times; 0) + (1 &times; 0) + (0 &times; 1) + (1 &times; 1) + (0 &times; 0) + (1 &times; 1) + (1 &times; 0)&nbsp;
+                    </td>
+                    <td>
+                        =&nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-width:thin;">
+                        0
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        1
+                    </td>
+                    <td>
+                        0
+                    </td>
+                    <td style="border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        (0 &times; 1) + (0 &times; 0) + (1 &times; 1) + (1 &times; 1) + (1 &times; 0) + (0 &times; 1) + (1 &times; 0)&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="9">
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        1&nbsp;
+                    </td>
+                    <td colspan="4">
+                        &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="9">
+                        &nbsp;
+                    </td>
+                    <td style="border-left-style:solid;border-right-style:solid;border-width:thin;">
+                        0&nbsp;
+                    </td>
+                    <td colspan="4">
+                        &nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Sure enough 1011010 is a valid code word.  As I stated at the top of this
+    section remove the parity bits to get the encoded value.  In this case
+    1011011 was likely transmitted as 1011010, which encodes 1010.</p>
+
+    <a name="implementation"></a>
+    <h2>Implementation</h2>
+    <p>Hopefully you have a reasonable grasp of the actual <a href="#encoding">
+    encoding</a> and <a href="#decoding">decoding</a> algorithm.  Now comes the
+    fun part where I discuss how I implemented it in my
+    <a href="#download">source code.</a></p>
+
+    <p>I actually provide two different encoding functions (matrix
+    multiplication and table look up) and three different decoding functions
+    (matrix multiplication, table look up, and packed table look up).</p>
+
+    <h3>Encoding with Matrices</h3>
+    <p>The trick to encoding with matrices is realizing that all the values that
+    you need to deal with can be packed into right justified bytes
+    (<code>unsigned char</code>s).  Pack the data to be encoded into a byte and
+    pack the <strong>columns</strong> of the generator matrix into another array
+    of <code>unsigned char</code>s.</p>
+
+    <p>The <em>i</em><sup>th</sup> bit of a code word equals the data word times
+    the <em>i</em><sup>th</sup> column of the generator matrix, which is the
+    <em>i</em><sup>th</sup> entry in the array.  Because of the way
+    <a href="#mod2">modulo 2</a> arithmetic works, this is just a bitwise ANDing
+    of the two bytes followed by an XOR of each of the bits in the results.</p>
+
+    <p>Download a copy of my <a href="#download">source</a> to see how this is
+    done.</p>
+
+    <h3>Encoding with Tables</h3>
+    <p>I'm actually ashamed to write something here.  Since a Hamming (7,4) code
+    only encodes 4 bits of data at a time, there are only 16 possible data
+    values to encode.  All I did here was create a 16 byte array called
+    <code>hammingCodes</code> and defined it such that
+    <code>hammingCodes</code>[<em>data value</em>] = <em>code word</em>.</p>
+
+    <p>I imagine that every machine out there that will produce smaller and
+    faster look up table code than matrix multiplication code.  The only
+    downside to using a lookup table is that it requires you to have computed
+    every possible code word in advance, which isn't a big deal, because there
+    are only 16 of them.</p>
+
+    <h3>Decoding with Matrices</h3>
+    <p>Decoding with matrices, is very much like encoding with matrices.  The
+    big difference being that you multiply a packed array where each index
+    contains the bits in a row of the parity check array with a byte containing
+    the received code word.  This can be done with ANDing and XORing just like
+    it can for encoding.</p>
+
+    <p>The result of the matrix multiplication is the &quot;syndrome&quot;.
+    If the syndrome is 0, the least significant 4 bits of the code word are the
+    encoded data.  If the &quot;syndrome&quot; is non-zero, toggle the bit in
+    the postition matching the column of the parity check matrix that matches
+    the &quot;syndrome&quot;.  (If the &quot;syndrome&quot; matches the
+    4<sup>th</sup> column, toggle the 4<sup>th</sup> bit.)  I use an array with
+    the &quot;syndrome&quot; as it's index to provide a mask to use
+    for toggling the errored bit.  After the error has been corrected, the least
+    significant 4 bits of the code word are the encoded data.</p>
+
+    <p>Download a copy of my <a href="#download">source</a> to see how this is
+    done.</p>
+
+    <h3>Decoding with Tables</h3>
+    <p>Here is yet another item that I'm ashamed to write something about.
+    Since a Hamming (7,4) code only encodes to a 7 bit code word, there are only
+    128 possible received values to decode.  All I did here was create a 128
+    byte array called <code>hammingDecodeValues</code> and defined it such that
+    <code>hammingDecodeValues</code>[<em>code word</em>] = <em>data value</em>.
+    </p>
+
+    <p>Since Hamming (7,4) codes decode to 4 bit code words, you can save some
+    data space and pack two data values into a single byte.  I also provide a
+    look up table called hammingPackedDecodeValues which packs two data values
+    into a single <code>unsigned char</code>.  The value of
+    <code>hammingPackedDecodeValues</code>[<em>code word</em>&nbsp;/&nbsp;2] is
+    a byte packed such that the 4 most significant bits are the data value of an
+    odd code word and the 4 least significant bits are the data values of an
+    even code word.</p>
+
+    <p>I imagine that every machine out there that will produce smaller and
+    faster look up table code than matrix multiplication code.  On most machines
+    I would expect the code for dealing with packed look up tables to be smaller
+    but slower than the code for dealing with unpacked look up tables.  The only
+    downside to using a lookup table is that it requires you to have computed
+    the correction to apply to every possible received code word in advance.</p>
+
+    <h3>Using a Different Code</h3>
+    <p>The source I provide happens to be for the code in the
+    <a href="#example2">encoding example</a>.  It's pretty trivial to edit the
+    generator and parity check matrices for a different Hamming (7,4) code,
+    just put all of the 1s and 0s where they belong for your code and you're
+    in business.  Once you have the generator and parity check matrices, the
+    test application that I provide can write the look up tables.  Instructions
+    for generating the look up tables are included in the README file.</p>
+
+    <hr style="width:100%;">
+
+    <a name="download"></a>
+    <h2>Actual Software</h2>
+    <p>I am releasing my implementation of Hamming encoding and decoding
+    under the GNU
+    <a href="https://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
+    The source code repository is available on
+    <a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
+    the latest revision of the master branch, unless you're looking for
+    something specific.</p>
+
+    <table summary="GitHub Repositories">
+      <tr>
+        <th valign="top" align="left">Repository Location</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/hamming">
+            https://github.com/michaeldipperstein/hamming
+          </a>
+        </th>
+      </tr>
+    </table>
+
+    <p>If you have any further questions or comments, you may contact me by
+    e-mail.  My e-mail address is:
+    <a href="mailto:mdipper@alumni.engr.ucsb.edu">mdipper@alumni.engr.ucsb.edu</a></p>
+
+    <p>If you're looking for more information on, Hamming codes, your favorite
+    web search engine should provide you with several options.  I found that
+    <a href="https://en.wikipedia.org/wiki/Hamming_code">Wikipedia
+    </a> contained some good historical background and provides an alternate
+    algorithm.  The algorithm that I ended up implementing was strongly
+    influenced by discussions in
+    <a href="http://www2.rad.com/networks/1994/err_con/hamming.htm">
+    Error Correction with Hamming Codes</a>.</p>
+
+</div><!-- ends main-->
+
+</div><!--container1-->
+</div><!--container2-->
+
+<p><a href="./index.html">Home</a><br>
+Last updated on <em>August 6, 2017</em></p>
+
+</body>
+</html>
