@@ -1,0 +1,571 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+<title>Sort Library Discussion and Implementation</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="generator" content="quanta">
+<meta name="author" content="Michael Dipperstein">
+<meta name="keywords"
+    content="insertion sort bubble sort shell sort quick sort merge sort heap sort radix sort">
+<meta name="description"
+    content="Discussion and Implementation of a sort library">
+<link rel="stylesheet" href="./twocol.css" type="text/css">
+</head>
+
+<body>
+
+<div id="container2">
+<div id="container1">
+
+<div id="navbar">
+    <h1>Project Index</h1>
+    <hr style="width:90%;text-align: center;">
+
+    <p><a href="./index.html">Home</a></p>
+
+    <h2>Compression</h2>
+    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
+    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
+    <a href="./delta.html">Delta Coding</a><br>
+    <a href="./freq.html">Frequency Substitution</a><br>
+    <a href="./huffman.html">Huffman Coding</a><br>
+    <a href="./lzss.html">LZSS Coding</a><br>
+    <a href="./lzw.html">LZW Coding</a><br>
+    <a href="./rice.html">Rice (Golomb) Coding</a><br>
+    <a href="./rle.html">Run Length Encoding</a></p>
+
+    <h2>Misc. Programming</h2>
+    <p><a href="./projects.html">School Projects</a><br>
+    <a href="./mltp.html">Thesis Project</a><br>
+    <a href="./crypt.html">crypt(3) Source</a><br>
+    <a href="./hamming.html">Hamming Codes</a><br>
+    <a href="./bitarray.html">Bit Array Libraries</a><br>
+    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
+    <a href="./sqrt.html">Square Root Approximation Library</a><br>
+    <a href="./sort.html">Sort Library</a><br>
+    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
+    <a href="./optlist.html">Command Line Option Parser</a><br>
+    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
+    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
+    <a href="./ezini.html">INI File Parser and Creator</a></p>
+
+    <hr style="width:90%;text-align: center;">
+
+    <h1>Obligatory Links</h1>
+    <a href="http://counter.li.org/">
+        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
+        width="125" height="72">
+    </a><br>
+
+    <a href="https://validator.w3.org/check?uri=referer">
+        <img src="https://www.w3.org/Icons/valid-html401"
+        alt="Valid HTML 4.01 Strict" height="31" width="88">
+    </a>
+</div><!-- ends navbar-->
+
+<div id="main">
+    <div id="header">
+        <h1>A Discussion of Sorting Algorithms and Their Implementation</h1>
+        <h3>by Michael Dipperstein</h3>
+    </div>
+
+    <hr style="width:100%;">
+
+    <p>The more basic stuff I publish source for, the more requests for source I
+    seem to get.  This time my <a href="../huffman/index.html">
+    Huffman code page</a> landed me a request for C++ code which implements
+    Huffman coding and merge sort.  The request obviously came from a student
+    trying to get me to do his/her homework.  I didn't do the homework
+    assignment, but it started me thinking about sorting algorithms, and
+    off I went on a trip down sorting memory lane.</p>
+
+    <p>I thought that I could put everything to rest after reading about some of
+    the algorithms I remembered the names of.  After all, there are people that
+    have made a career out of studying sorting algorithms, what would I want to
+    do that hadn't already been done?  I thought wrong, there's a lot of
+    discussion about the algorithms, and even some code.  Most of the code I
+    saw had errors.  Other code snippets were just obfuscated by object oriented
+    programming techniques.  So I decided to write my own library of sorting
+    algorithms.</p>
+
+    <p>As time goes on, I continue to discover new algorithms and sometimes even
+    add them to my library.  I recently discovered the
+    <a href="#RadixSort">Radix Sort</a> while reading about optimizations to the
+    <a href="../bwt/index.html">Burrows-Wheeler Transformation</a>.
+    I'm sure I'll find another sort to add in the future.</p>
+
+    <p>The rest of this page discusses some of the issues concerning the sorting
+    algorithms that I chose to implement.</p>
+
+    <p>Click <a href="#download">here</a> to skip the discussion and go to
+    instructions on downloading my sorting library.</p>
+
+    <hr style="width:100%;">
+
+    <h2>Sorting Algorithms</h2>
+
+    <p>There are several popular and well researched sorting algorithms.  My
+    sort library implements the traditional version of the following algorithms:
+    </p>
+
+    <ul>
+        <li><a href="#InsertionSort">Insertion Sort</a>
+        <li><a href="#BubbleSort">Bubble Sort</a>
+        <li><a href="#ShellSort">Shell Sort</a>
+        <li><a href="#QuickSort">Quick Sort</a>
+        <li><a href="#MergeSort">Merge Sort</a>
+        <li><a href="#HeapSort">Heap Sort</a>
+        <li><a href="#RadixSort">Radix Sort</a>
+    </ul>
+
+    <p>Each of the algorithms has the following order of operations:</p>
+
+    <table style="width:100%;" border="1" summary="order of operations">
+    <tr>
+        <th></th>
+        <th>Best Case</th>
+        <th>Average Case</th>
+        <th>Worst Case</th>
+        </tr>
+
+    <tr>
+        <td>Insertion Sort</td>
+        <td>O(n)</td>
+        <td>O(n<sup>2</sup>)</td>
+        <td>O(n<sup>2</sup>)</td>
+    </tr>
+
+    <tr>
+        <td>Bubble Sort</td>
+        <td>O(n)</td>
+        <td>O(n<sup>2</sup>)</td>
+        <td>O(n<sup>2</sup>)</td>
+    </tr>
+
+    <tr>
+        <td>Shell Sort<sup><a href="#note1">1</a></sup></td>
+        <td>O(n &times; log(n))</td>
+        <td>O(n<sup>3/2</sup>)</td>
+        <td>O(n<sup>3/2</sup>)</td>
+    </tr>
+
+    <tr>
+        <td>Quick Sort</td>
+        <td>O(n)</td>
+        <td>O(n &times; log(n))</td>
+        <td>O(n<sup>2</sup>)</td>
+    </tr>
+
+    <tr>
+        <td>Merge Sort</td>
+        <td>O(n &times; log(n))</td>
+        <td>O(n &times; log(n))</td>
+        <td>O(n &times; log(n))</td>
+    </tr>
+
+    <tr>
+        <td>Heap Sort</td>
+        <td>O(n &times; log(n))</td>
+        <td>O(n &times; log(n))</td>
+        <td>O(n &times; log(n))</td>
+    </tr>
+
+    <tr>
+        <td><p>Radix Sort<sup><a href="#note1">2</a></sup></td>
+        <td>O(k &times; n)</td>
+        <td>O(k &times; n)</td>
+        <td>O(k &times; n)</td>
+    </tr>
+
+    <tr>
+        <td colspan="4">
+        <sup><a name="note1">1</a></sup> When using an increment of the form
+        (3<sup>k</sup> - 1) / 2
+        </td>
+    </tr>
+
+    <tr>
+        <td colspan="4">
+        <sup><a name="note2">2</a></sup> Here k is the number of keys
+        </td>
+    </tr>
+    </table>
+
+    <a name="InsertionSort"></a>
+    <h3>Insertion Sort</h3>
+    <p>Insertion sort is probably the first sorting algorithm that is taught in
+    programming classes.  It is far from efficient in terms of the number of
+    comparisons, but is very compact in terms of code space required.  As such,
+    the insertion sort algorithm may be useful for sorting small lists.</p>
+
+    <p>Insertion sort is an iterative algorithm that makes n - 1 passes on a
+    list of n items.  On the first pass the second item in the unsorted list is
+    inserted in the proper position for a sorted list containing the first two
+    items.  The next pass, the third item is inserted in a the proper position
+    for a list sorted list containing the first three items.  After the
+    k<sup>th</sup> iteration the first k + 1 items in the list are in
+    sorted order.  The algorithm continues until the n<sup>th</sup> item
+    is inserted into its position.</p>
+
+    <p>The insertion sort algorithm is implemented by my
+    <a href="#download">sort library</a> function <code>InsertionSort</code>.
+    </p>
+
+    <a name="BubbleSort"></a>
+    <h3>Bubble Sort</h3>
+    <p>When I first learned the bubble sort algorithm, it was described as
+    &quot;cute&quot;.  I believe that cuteness is the only thing this algorithm
+    has going for it.  It typically requires the same order of operations as
+    insertion sort, and is not any more code efficient.</p>
+
+    <p>Bubble sort is an iterative algorithm that makes n - 1 passes on a list
+    of n items.  On the first pass, bubble sort starts at the head of the list
+    and compares the first two items, if the items are out of order, they are
+    swapped, then the second and third items are compared and swapped if
+    necessary.  The comparison and swapping continue to the end of the list.
+    After the first iteration, the largest item is in the n<sup>th</sup>
+    position.</p>
+
+    <p>The algorithm repeats itself, stopping one item earlier each pass.  The
+    algorithm completes when only the first two items are compared.  This sort
+    library includes an additional optimization which will halt the algorithm on
+    any pass which finds the list to be already sorted (no swaps are performed).
+    </p>
+
+    <p>The bubble sort algorithm is implemented by my <a href="#download">sort
+    library</a> function <code>BubbleSort</code>.</p>
+
+    <a name="ShellSort"></a>
+    <h3>Shell Sort</h3>
+    <p>Shell sort is an optimization of the <a href="#InsertionSort">insertion
+    sort</a> proposed by D. L. Shell.  Shell observed that performing an
+    insertion sort on sublist of items that are separated by some distance (an
+    <i>increment</i>) may allow items to be moved further across the list.</p>
+
+    <p>For a list of n items [x<sub>1</sub> &hellip; x<sub>n</sub>], select an
+    increment, i, and start by sorting the resulting n/i sub lists:<br>
+    [x<sub>1</sub>, x<sub>i + 1</sub>, x<sub>2i + 1</sub>, &hellip;],<br>
+    [x<sub>2</sub>, x<sub>i + 2</sub>, x<sub>2i + 2</sub>, &hellip;], &hellip;<br>
+    [x<sub>i</sub>, x<sub>i + i</sub>, x<sub>2i + i</sub>, &hellip;].</p>
+
+    <p>Next decrease i and repeat the process until i equals 1.  At the time of
+    my writing this, no optimal increment value is known.  However, D.E. Knuth
+    has demonstrated that using increments of the form (3<sup>k</sup> - 1) / 2
+    results in an O(n<sup>3/2</sup>) Shell sort.</p>
+
+    <p>The Shell sort algorithm is implemented by my <a href="#download">sort
+    library</a> function <code>ShellSort</code>.  The Shell sort function
+    provided in this library uses increments of the form
+    (3<sup>k</sup> - 1) / 2.</p>
+
+    <a name="QuickSort"></a>
+    <h3>Quick Sort</h3>
+    <p>ANSI C provides a quick sort function, <code>qsort</code> in
+    <code>stdlib.h</code>, yet I felt compelled to include a quick sort function
+    in my library.</p>
+
+    <p>Quick sort is a divide and conquer algorithm with two phases, a partition
+    phase and a sort phase.</p>
+
+    <p>In the partition phase list of two or more elements are partitioned into
+    two smaller lists.  All list items less than or equal to a <em>pivot</em>
+    item are placed in one partition, while all items greater than a
+    <em>pivot</em> are placed in another partition.  For my implementation, I
+    always designate the first item in the list as the <em>pivot</em>.
+    To partition, I maintain left and right search pointers and perform the
+    following steps.</p>
+
+    <p><strong>Step 1.</strong> Start the left search pointer at the second item
+    in the list and the right pointer at the last item in the list.</p>
+
+    <p style="margin-bottom: 0px;"><strong>Step 2.</strong> Move the left
+    pointer to the right until it finds an item greater than the <em>pivot</em>
+    or points to the same item as the right pointer.</p>
+    <ul style="margin-top: 0px; margin-bottom: 0px; padding-left: 4pc;">
+        <li>If the left pointer crosses the right pointer, partition the list at
+        the crossing point and quit.
+    </ul>
+
+    <p style="margin-bottom: 0px;"><strong>Step 3.</strong> Move the right
+    pointer left until it crosses the left pointer or finds an item less than or
+    equal to the <em>pivot</em>.</p>
+    <ul style="margin-top: 0px; margin-bottom: 0px; padding-left: 4pc;">
+        <li>If the right pointer crosses the left pointer, partition the list at
+        the crossing point and quit.
+    </ul>
+
+    <p><strong>Step 4.</strong> Swap the items pointed to by the two pointers
+    and go to step 2.</p>
+
+    <p>The sort phase is really simple.  Just call the quick sort function
+    twice, once passing the left partition as the list to be sorted, then
+    passing the right partition as the list to be sorted.</p>
+
+    <p>Quick sort has an average order of operation of O(n &times; log(n)), but
+    when the partitions are not anywhere near even, the order of operation
+    approaches O(n<sup>2</sup>).  For sorted lists and reverse sorted lists
+    quick sort is an O(n<sup>2</sup>) algorithm.</p>
+
+    <p>My <a href="#download">sort library</a> function <code>QuickSort</code>
+    implements the quick sort algorithm.  It is a recursive implementation of
+    quick sort which makes it pretty inefficient with stack space.  The stack
+    space consumed may be equal to the size of the list.  A web search should
+    reveal several memory optimizations for quick sort.</p>
+
+    <a name="MergeSort"></a>
+    <h3>Merge Sort</h3>
+    <p>Like <a href="#QuickSort">quick sort</a>, merge sort is a divide and
+    conquer algorithm with two phases.  In the case of merge sort, the phases
+    are a partition phase, and a merge phase.</p>
+
+    <p>In the partition phase, if the list of items to be sorted contains more
+    than one item, the list is split in half and the merge sort algorithm is
+    applied on each half of the list.</p>
+
+    <p>At the end of the partition phase, the algorithm has two sorted list
+    halves.  The merge phase merges the two sorted halves into one list.  For my
+    implementation of this algorithm, I perform the merge by allocating a block
+    of memory equal to the size of the combined lists, and merge the lists into
+    the new memory block.  Allocation of a new memory block means that this
+    implementation requires additional storage space equal to the size of the
+    original list.</p>
+
+    <p>To merge two lists, compare the lowest value in one list with the lowest
+    value in the other list.  Remove the lowest of the two values from its list
+    and place it at the end of the merged list.  Repeat this process until there
+    are no more items in either list.</p>
+
+    <p>Unlike <a href="#QuickSort">quick sort</a>, merge sort always partitions
+    the list in half, so it is always an order O(n &times; log(n)) algorithm.
+    </p>
+
+    <p>The merge sort algorithm is implemented by my <a href="#download">sort
+    library</a> function <code>MergeSort</code>.</p>
+
+    <a name="HeapSort"></a>
+    <h3>Heap Sort</h3>
+    <p>Heap sort a popular in place O(n &times; log(n)) sort algorithm.  Unlike
+    <a href="#QuickSort">quick sort</a> and <a href="#MergeSort">merge sort</a>,
+    heap sort does not require additional memory allocations to store pieces of
+    the list being sorted.</p>
+
+    <p>Heap sort is a two phase algorithm, it has a heap building phase and a
+    promotion phase.  A heap is a binary tree with the propriety that every node
+    is greater than it's children.  For a list of 1 .. N items this means that
+    item i is greater than it's children, items (i / 2) and ((i / 2) + 1).</p>
+
+    <p>Once the heap is built, the largest item will be at the root of the heap.
+    To sort, simply swap the first item in the list with N<sup>th</sup> item in
+    the list.  Next rebuild the heap with items 1 .. (N - 1).  Repeat the
+    process of swapping and rebuilding the heap with one less item, until only
+    two items remain.</p>
+
+    <p>The heap sort algorithm is implemented by my <a href="#download">sort
+    library</a> function <code>HeapSort</code>.</p>
+
+    <a name="RadixSort"></a>
+    <h3>Radix Sort</h3>
+    <p>Radix sort is an unusual sort algorithm.  All the sort algorithms
+    discussed so far compare the elements being sorted to eachother.  The radix
+    sort doesn't.  A radix sort uses one or more keys to sort values.  The key
+    of a value indicates the sort grouping for a value on a particular pass.
+    Successive passes with different keys may be used to sort a list of
+    elements.</p>
+
+    <p>On a radix sort pass, a list of items to be sorted is processed from
+    beginning to end.  One at a time, the items in the list are placed at the
+    end of a list of items with the same key value.  After all items have been
+    processed, the lists of key values are reassembled smallest key to largest
+    key.</p>
+
+    <p>A somewhat intuitive example of how to use a radix sort might be
+    alphabetizing strings of length N.  Each pass of the radix sort should use a
+    character in the string as it's key.  The less intuitive part about
+    alphabetizing is that radix sort passes should be from performed from the
+    last character to the first character.  The first pass will use the
+    N<sup>th</sup> character, the second pass will use the (N - 1)<sup>th</sup>
+    character, &hellip;, the N<sup>th</sup> pass will use the first character.
+    </p>
+
+    <p><strong>Example:</strong> Sorting 3 Character Strings (start with third
+    character).  Each cell represents a bin.</p>
+    <table summary="Character Radix Sort" border="1">
+        <tbody>
+        <tr>
+            <td>Unsorted</td>
+            <td>vbn</td>
+            <td>asd</td>
+            <td>qwd</td>
+            <td>vgy</td>
+            <td>qaz</td>
+        </tr>
+        <tr>
+            <td>First Pass</td>
+            <td colspan="2">asd qwd</td>
+            <td>vbn</td>
+            <td>vgy</td>
+            <td>qaz</td>
+        </tr>
+        <tr>
+            <td>Second Pass</td>
+            <td>qaz</td>
+            <td>vbn</td>
+            <td>vgy</td>
+            <td>asd</td>
+            <td>qwd</td>
+        </tr>
+        <tr>
+            <td>Third Pass</td>
+            <td>asd</td>
+            <td>qaz</td>
+            <td>qwd</td>
+            <td colspan="2">vbn vgy</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <p>Sorting unsigned integers is similar to sorting strings.  If we use a
+    radix of 10, we can sort integers one digits at a time.  Like strings,
+    integers should be sorted least significant digit to most significant
+    digit.</p>
+
+    <p><strong>Example:</strong> Sorting 4 Digit Integers (start with least
+    significant digit).  Each cell represents a bin.</p>
+    <table summary="Integer Radix Sort" border="1">
+        <tbody>
+        <tr>
+            <td>Unsorted</td>
+            <td>1356</td>
+            <td>2453</td>
+            <td>7579</td>
+            <td>5624</td>
+            <td>1234</td>
+        </tr>
+        <tr>
+            <td>First Pass</td>
+            <td>2453</td>
+            <td colspan="2">5624 1234</td>
+            <td>1356</td>
+            <td>7579</td>
+        </tr>
+        <tr>
+            <td>Second Pass</td>
+            <td>5624</td>
+            <td>1234</td>
+            <td colspan="2">2453 1356</td>
+            <td>7579</td>
+        </tr>
+        <tr>
+            <td>Third Pass</td>
+            <td>1234</td>
+            <td>1356</td>
+            <td>2453</td>
+            <td>7579</td>
+            <td>5624</td>
+        </tr>
+        <tr>
+            <td>Fourth Pass</td>
+            <td colspan="2">1234 1356</td>
+            <td>2453</td>
+            <td>5624</td>
+            <td>7579</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <p>Pierre Terdiman's article
+    <a href="http://codercorner.com/RadixSortRevisited.htm">
+    Radix Sort Revisited</a> discusses radix sort techniques for sorting
+    signed integers and floating point values.</p>
+
+    <p>The radix sort algorithm is implemented by my <a href="#download">sort
+    library</a> function <code>RadixSort</code>.  Each time
+    <code>RadixSort</code> is called, it makes two passes on the data being
+    sorted.  The first pass counts the number of values with each possible key,
+    the second pass places the data in its sorted order.  Counting the number of
+    values for each key allows the data to be sorted into a fixed size array
+    instead of a linked list or similar data structure.</p>
+
+    <a name="usage"></a>
+    <h3>Function Usage</h3>
+    <p>The <a href="#download">library archive</a> that I have provided includes
+    a program file, sample.c, which demonstrates the usage of each sort
+    function.  I have also provided the function <code>VerifySort</code> which
+    may be used to determine if a list is actually sorted.  All of my sort
+    functions share the same parameter list as the <code>qsort</code> function
+    provided by <code>stdlib.h</code>:</p>
+
+    <ul>
+        <li>A pointer to the list of items to be sorted
+        <li>The number of items in the list
+        <li>The size of the list items
+        <li>A pointer to a comparison function
+    </ul>
+
+    <p>By utilizing the same format, code which calls <code>qsort</code> may be
+    modified to use use my functions simply by changing the function name.
+    Conversely, code that uses my functions may be made to use
+    <code>qsort</code> simply by changing the function name.</p>
+
+    <p>It is possible to sacrifice flexibility for speed by rewriting the
+    functions so that a fixed comparison is performed inline instead of
+    calling the comparison function passed as a parameter.  Greater speed
+    may also be obtained by using arrays of a known type instead of void
+    pointers with an item size determined at runtime.</p>
+
+    <hr style="width:100%;">
+
+    <a name="download"></a>
+    <h2>Actual Software</h2>
+    <p>I am releasing my implementation of the sorting algorithms under the
+    <a href="https://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
+    The source code repository is available on
+    <a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
+    the latest revision of the master branch, unless you're looking for
+    something specific.</p>
+
+    <table summary="GitHub Repositories">
+      <tr>
+        <th valign="top" align="left">Repository Location</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/sort">
+            https://github.com/michaeldipperstein/sort
+          </a>
+        </th>
+      </tr>
+    </table>
+
+    <hr style="width:100%;">
+
+    <a name="portability"></a>
+    <h2>Portability</h2>
+    <p>The source code that I have provided is written in ANSI C.  It should
+    work on any system with an ANSI C compiler.</p>
+
+    <h2>Known Bugs</h2>
+    <p>I have received a report that sorting large sets (&gt;2<sup>24</sup>
+    values) of 64-bit integers frequently fails when attempted on PowerPC system
+    running 64-bit Linux.  I have been unable to duplicate the problem on 32-bit
+    x86 platforms and do not have a 64-bit platform to test on.</p>
+
+    <p>Another error may occur when the number of bytes being sorted exceeds the
+    capacity of <code>size_t</code>.</p>
+
+    <hr style="width:100%;">
+
+    <p>If you have any further questions or comments, you may contact me by
+    e-mail.  My e-mail address is:
+    <a href="mailto:mdipper@alumni.engr.ucsb.edu">mdipper@alumni.engr.ucsb.edu</a></p>
+
+</div><!-- ends main-->
+
+</div><!--container1-->
+</div><!--container2-->
+
+<p><a href="./index.html">Home</a><br>
+Last updated on <em>August 6, 2017</em></p>
+
+</body>
+</html>
