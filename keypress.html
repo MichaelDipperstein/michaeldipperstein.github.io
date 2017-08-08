@@ -1,0 +1,336 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+<title>POSIX Wait for Key Press</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="generator" content="Geany 0.21">
+<meta name="keywords" content="POSIX key press">
+<link rel="stylesheet" href="./twocol.css" type="text/css">
+</head>
+
+<body>
+
+<div id="container2">
+<div id="container1">
+
+<div id="navbar">
+    <h1>Project Index</h1>
+    <hr style="width:90%;text-align: center;">
+
+    <p><a href="./index.html">Home</a></p>
+
+    <h2>Compression</h2>
+    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
+    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
+    <a href="./delta.html">Delta Coding</a><br>
+    <a href="./freq.html">Frequency Substitution</a><br>
+    <a href="./huffman.html">Huffman Coding</a><br>
+    <a href="./lzss.html">LZSS Coding</a><br>
+    <a href="./lzw.html">LZW Coding</a><br>
+    <a href="./rice.html">Rice (Golomb) Coding</a><br>
+    <a href="./rle.html">Run Length Encoding</a></p>
+
+    <h2>Misc. Programming</h2>
+    <p><a href="./projects.html">School Projects</a><br>
+    <a href="./mltp.html">Thesis Project</a><br>
+    <a href="./crypt.html">crypt(3) Source</a><br>
+    <a href="./hamming.html">Hamming Codes</a><br>
+    <a href="./bitarray.html">Bit Array Libraries</a><br>
+    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
+    <a href="./sqrt.html">Square Root Approximation Library</a><br>
+    <a href="./sort.html">Sort Library</a><br>
+    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
+    <a href="./optlist.html">Command Line Option Parser</a><br>
+    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
+    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
+    <a href="./ezini.html">INI File Parser and Creator</a></p>
+
+    <hr style="width:90%;text-align: center;">
+
+    <h1>Obligatory Links</h1>
+    <a href="http://counter.li.org/">
+        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
+        width="125" height="72">
+    </a><br>
+
+    <a href="https://validator.w3.org/check?uri=referer">
+        <img src="https://www.w3.org/Icons/valid-html401"
+        alt="Valid HTML 4.01 Strict" height="31" width="88">
+    </a>
+</div><!-- ends navbar-->
+
+<div id="main">
+    <div id="header">
+        <h1>POSIX Wait for Key Press</h1>
+        <h3>by Michael Dipperstein</h3>
+    </div>
+
+    <hr style="width:100%;">
+
+    <p>Sometimes things aren't as simple as they should be.  Most of the time
+    I write code for embedded systems that don't come with things like
+    screens and keyboards.  That wasn't true a few days ago, when I realized
+    that I didn't know how to make a C program sleep until a key is pressed.
+    It sounds pretty easy, but it turns out there isn't a way to do it with
+    ANSI C.  If you don't believe me, read the
+    <a href="http://c-faq.com/osdep/cbreak.html">FAQ</a>.</p>
+
+    <p>I wanted something for a Linux system, and that can be done.  After
+    doing a lot of reading I came up with something that met my needs.  Then
+    on my way home from work, I thought about writing something more generic,
+    and I came up with this.  If you're in a hurry and just want code feel
+    free to scroll down, copy it, and move along.</p>
+
+    <p>There are several websites discussing the problem and providing
+    variations on the same theme.  This web page discusses what I came up
+    with and the design decisions that I made.  If you have any interesting
+    ideas, comments, or just happen to be board, feel free to contact me
+    at <a href="mailto:mdipper@alumni.engr.ucsb.edu">
+    mdipper@alumni.engr.ucsb.edu</a>.</p>
+
+    <p>If you just want my source code, click <a href="#download">here</a> for
+    information on downloading it.</p>
+
+    <hr style="width:100%;">
+
+    <h2>Objective</h2>
+    <p>ANSI C provides a <code>getchar</code> function that basically returns
+    the next character input from <code>stdin</code>.  <code>getchar</code>
+    is blocking, but the tread it's in sleeps.  That's exactly what I wanted.
+    The only problems are that <code>getchar()</code> always echos the key
+    pressed and it normally won't recognize the input until the enter key is
+    pressed.
+    </p>
+
+    <p>I wanted to code that did not require the enter key to be pressed before
+    the key press would be seen by <code>stdin</code>.  I also did not want to
+    echo the key press to <code>stdout</code>, and I did not need to know what
+    key was pressed.  All the key press needed to do is unblock an idle thread.
+    </p>
+
+    <h2>Sample Code</h2>
+    <p>Below is a listing of a function that achieves all of my stated goals.
+    It provides the option to enable/disable of echoing the key to
+    <code>stdout</code> and returns the character value of the key pressed in
+    case you have a use for it.</p>
+
+<div id="line_numbers"
+    style="width:auto;float:left;overflow:auto;white-space:pre;line-height:1;">
+<code> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+</code>
+</div>
+
+<div id="code"
+    style="width:90%;margin-left:1pc;float:left;clear:right;overflow:auto;white-space:pre;line-height:1;">
+<code>int keypress(const kp_echo_t echo)
+{
+    struct termios savedState;
+    struct termios newState;
+    unsigned char echo_bit;     /* enable/disable echo.  logic is reversed */
+    int c;
+
+    if (-1 == tcgetattr(STDIN_FILENO, &amp;savedState))
+    {
+        return EOF;             /* error on tcgetattr */
+    }
+
+    newState = savedState;
+
+    if (KP_ECHO_OFF == echo)
+    {
+        echo_bit = ECHO;        /* echo bit set to disable echo */
+    }
+    else
+    {
+        echo_bit = 0;           /* echo bit cleared to enable echo */
+    }
+
+    /* use canonical input and set echo.  set minimal input to 1. */
+    newState.c_lflag &amp;= ~(echo_bit | ICANON);
+    newState.c_cc[VMIN] = 1;
+
+    if (-1 == tcsetattr(STDIN_FILENO, TCSANOW, &amp;newState))
+    {
+        return EOF;             /* error on tcsetattr */
+    }
+
+    c = getchar();      /* block (without spinning) until we get a key press */
+
+    /* restore the saved state */
+    if (-1 == tcsetattr(STDIN_FILENO, TCSANOW, &amp;savedState))
+    {
+        return EOF;             /* error on tcsetattr */
+    }
+
+    return c;
+}
+</code>
+</div>
+
+    <h2 style="clear:left">How it Works</h2>
+    <p>All of the magic required to change the way your terminal behaves lies
+    in the functions <code>tcgetattr</code> and <code>tcsetattr</code>.  These
+    functions are responsible for getting and setting terminal attributes.
+    For more information see <a href="https://linux.die.net/man/3/tcgetattr">
+    https://linux.die.net/man/3/tcgetattr</a> for the <code>tcgetattr</code> and
+    <code>tcgetattr</code> man page.</p>
+
+    <p>Line 8 of my function gets the current <code>stdin</code> attributes
+    and saves it in the variable <code>savedState</code>.</p>
+
+    <p>Lines 13 through 26 compute a new set of terminal attributes for
+    <code>stdin</code> that are just like the old ones, except canonical mode
+    and possibly echo are disabled (Line 25).</p>
+
+    <p>Disabling canonical mode causes characters to be sent to
+    <code>stdin</code> after a timeout or a minimum number have been received.
+    Line 26 sets that minimum number to 1.</p>
+
+    <p>Line 28 applies the new set of attributes to <code>stdin</code>.</p>
+
+    <p>Line 33 uses <code>getchar()</code> to block until a character can be
+    read from <code>stdin</code>.  The value of the character is saved just
+    in case it's required by the calling function.</p>
+
+    <p>Line 36 restores the attributes of <code>stdin</code> to their previous
+    values.</p>
+
+    <hr style="width:100%;">
+
+    <h2>Using the Code</h2>
+    <p>Using the <code>keypress()</code> function is straight forward.  I placed
+    the <code>keypress()</code> function in a library that needs to be linked
+    to the calling code.  The file where <code>keypress()</code> function is
+    called from should include the file <code>keypress.h</code>.
+
+    <h3>Library Code Interface</h3>
+    <p>The keypress function is defined as follows:</p>
+    <div style="padding-left: 2pc;">
+    <code>
+    int keypress(const kp_echo_t echo);
+    </code>
+    </div>
+
+    <br>
+    <div style="padding-left: 2pc;">
+    <code>
+    echo
+    </code>
+    </div>
+    <div style="padding-left: 4pc;">
+    Set to <code>KP_ECHO_OFF</code> to prevent the key pressed from being echoed
+    to <code>stdout</code>.
+    </div>
+
+    <br>
+    <div style="padding-left: 2pc;">
+    Return Value
+    </div>
+    <div style="padding-left: 4pc;">
+    The value of the key pressed or <code>EOF</code>.  <code>EOF</code> is
+    returned for an End of File or error.  In the event of an error,
+    <code>errno</code> will also be set.
+    </div>
+
+    <p><code>kp_echo_t</code> is defined as follows:</p>
+
+    <div style="padding-left: 2pc;">
+    <code>
+    typedef enum<br>
+    {<br>
+    <span style="padding-left: 2pc;">KP_ECHO_OFF,</span><br>
+    <span style="padding-left: 2pc;">KP_ECHO_ON,</span><br>
+    } kp_echo_t;
+    </code>
+    </div>
+
+
+    <h2>Portability</h2>
+
+    <p>All the source code that I have provided is written in strict ANSI C,
+    however the <code>tcgetattr</code> and <code>tcsetattr</code> functions are
+    part of the POSIX specification. I would expect the source code to build
+    correctly on any POSIX-compliant machine with an ANSI C compiler. I have
+    tested the code compiled with gcc on Linux.  I wouldn't expect it to run
+    on a Windows machine, but it should run fine on a UNIX, like Mac OSX.</p>
+
+    <hr style="width:100%;">
+
+    <a name="download"></a>
+    <h2>Actual Software</h2>
+    <p>I am releasing my implementation of the Key Press Library under the GNU
+    <a href="https://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.  The
+    source code repository is available on
+    <a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
+    the latest revision of the master branch, unless you're looking for
+    something specific.</p>
+
+    <table summary="GitHub Repositories">
+      <tr>
+        <th valign="top" align="left">Repository Location</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/keypress">
+            https://github.com/michaeldipperstein/keypress
+          </a>
+        </th>
+      </tr>
+    </table>
+
+    <p>If you have any further questions or comments, you may contact me by
+    e-mail.  My e-mail address is:
+    <a href="mailto:mdipper@alumni.engr.ucsb.edu">mdipper@alumni.engr.ucsb.edu
+    </a></p>
+
+</div><!-- ends main-->
+
+</div><!--container1-->
+</div><!--container2-->
+
+<p><a href="./index.html">Home</a><br>
+Last updated on <em>August 7, 2017</em></p>
+
+</body>
+</html>
