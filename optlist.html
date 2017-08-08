@@ -1,0 +1,306 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+<title>ANSI C Command Line Option Parsing Library</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="generator" content="quanta">
+<meta name="keywords" content="command line option arguement parse getopt lgpl">
+<link rel="stylesheet" href="./twocol.css" type="text/css">
+</head>
+
+<body>
+
+<div id="container2">
+<div id="container1">
+
+<div id="navbar">
+    <h1>Project Index</h1>
+    <hr style="width:90%;text-align: center;">
+
+    <p><a href="./index.html">Home</a></p>
+
+    <h2>Compression</h2>
+    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
+    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
+    <a href="./delta.html">Delta Coding</a><br>
+    <a href="./freq.html">Frequency Substitution</a><br>
+    <a href="./huffman.html">Huffman Coding</a><br>
+    <a href="./lzss.html">LZSS Coding</a><br>
+    <a href="./lzw.html">LZW Coding</a><br>
+    <a href="./rice.html">Rice (Golomb) Coding</a><br>
+    <a href="./rle.html">Run Length Encoding</a></p>
+
+    <h2>Misc. Programming</h2>
+    <p><a href="./projects.html">School Projects</a><br>
+    <a href="./mltp.html">Thesis Project</a><br>
+    <a href="./crypt.html">crypt(3) Source</a><br>
+    <a href="./hamming.html">Hamming Codes</a><br>
+    <a href="./bitarray.html">Bit Array Libraries</a><br>
+    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
+    <a href="./sqrt.html">Square Root Approximation Library</a><br>
+    <a href="./sort.html">Sort Library</a><br>
+    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
+    <a href="./optlist.html">Command Line Option Parser</a><br>
+    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
+    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
+    <a href="./ezini.html">INI File Parser and Creator</a></p>
+
+    <hr style="width:90%;text-align: center;">
+
+    <h1>Obligatory Links</h1>
+    <a href="http://counter.li.org/">
+        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
+        width="125" height="72">
+    </a><br>
+
+    <a href="https://validator.w3.org/check?uri=referer">
+        <img src="https://www.w3.org/Icons/valid-html401"
+        alt="Valid HTML 4.01 Strict" height="31" width="88">
+    </a>
+</div><!-- ends navbar-->
+
+<div id="main">
+    <div id="header">
+        <h1>ANSI C Command Line Option Parsing Library</h1>
+    </div>
+
+    <hr style="width:100%;">
+
+    <p>I often end up writing little command line programs that behave
+    differently depending on the options that they are passed.  Most of
+    the software libraries that I publish include examples requiring
+    command line options.  I had been using the
+    <a href="https://www.gnu.org/software/libc/manual/html_node/Getopt.html">
+    getopt()</a> function to help me with the necessary parsing.</p>
+
+    <p>Since getopt() isn't ANSI, it's not included with all ANSI C
+    compilers.  That means that I need to include a copy of
+    <code>getopt()</code> with any of my code samples so people with compilers
+    that don't provide the <code>getopt()</code> function can still use my code.
+    Fortunately there is at least one <code>getopt()</code> implementation
+    published under version 2 of the
+    <a href="https://www.gnu.org/licenses/licenses.html#LGPL">GNU LGPL</a>.
+    The version even allows upgrading to new versions of the LGPL, so
+    I had been using that in my projects licensed under version 2.1 of
+    the LGPL.</p>
+
+    <p>When version 3 of the LGPL was released I decided that I wanted
+    to explicitly license my projects under the newer version.  There's
+    no reason that I couldn't continue to use the version 2
+    <code>getopt()</code> library, but there are things that I don't like about
+    <code>getopt()</code> that I wanted to change, and the license upgrade
+    seemed like a good reason to write a library that worked the way I wanted
+    it to work.</p>
+
+    <p>Now that my replacement library works pretty much the way that I
+    want it to work, I am publishing it under version 3 of the
+    <a href="https://www.gnu.org/licenses/licenses.html#LGPL">GNU LGPL</a>
+    in hopes that they will be of use to other people.</p>
+
+    <p>The rest of this page discusses, the optlist library, my
+    replacement for <code>getopt()</code>.</p>
+
+    <p>Michael Dipperstein<br>
+    <a href="mailto:mdipper@alumni.engr.ucsb.edu">
+    mdipper@alumni.engr.ucsb.edu</a></p>
+
+    <hr style="width:100%;">
+
+    <h2>Optlist Library</h2>
+    <h3>Introduction</h3>
+    <p>The optlist library provides the functions <code>GetOptList()</code> and
+    <code>FreeOptList()</code>.  The <code>GetOptList()</code> function is
+    similar to <code>getopt()</code>.  Its most notable differences are that
+    it returns a linked list to the command line arguments and their parameters.
+    One call to <code>GetOptList()</code> will return all of the command line
+    options and their arguments.</p>
+
+    <p style="margin-bottom: 0px;">Other Differences:</p>
+    <ul style="margin-top: 0px;">
+        <li><code>GetOptList()</code> will not modify <code>argc</code> or
+        <code>argv</code>
+        <li><code>GetOptList()</code> does not use global variables
+        <li><code>GetOptList()</code> is thread safe and reenterant
+        <li>Unfortunately, <code>GetOptList()</code> allocates memory which must
+        be freed one element at a time or by calling <code>FreeOptList()</code>
+    </ul>
+
+    <h3>New Types and Prototypes</h3>
+    <p style="margin-bottom: 0px;"><code>
+    typedef struct option_t<br>
+    {
+    </code></p>
+
+    <div style="padding-left: 2pc;">
+    <code>
+    char option;<br>
+    char *argument;<br>
+    int argIndex;<br>
+    struct option_t *next;
+    </code>
+    </div>
+
+    <p style="margin-top: 0px;"><code>
+    } option_t;<br>
+    <br>
+    option_t *GetOptList(int argc, char *const argv[], char *const options);<br>
+    void FreeOptList(option_t *list);
+    </code></p>
+
+    <h3>Usage</h3>
+    <p><code>GetOptList()</code>'s parameters &quot;argc&quot; and
+    &quot;argv&quot; are usually the argument count and array as passed to the
+    <code>main()</code> function on program invocation.  An element of argv that
+    starts with &quot;-&quot; is an option element.  The character following the
+    &quot;-&quot; is an option character.</p>
+
+    <p>The &quot;options&quot; parameter is a string containing legitimate
+    option characters.  If such a character is followed by a colon, the
+    option requires an argument. (e.g. &quot;a:bc?&quot; a, b ,c,
+    and, ? are all options.  a should be followed by an argument.)</p>
+
+    <p><code>GetOptList()</code> returns a linked list of type
+    <code>option_t</code>.  The <code>*next</code> field of the element at the
+    end of the list will be set to <code>NULL</code>.  The option field will
+    contain the option character.  If the option accepts an argument, a pointer
+    to the text that follows in the same argv-element, or the text of the
+    following argv-element will be stored in the <code>arguement</code> field.
+    Otherwise the <code>arguement</code> field is set to <code>NULL</code>.
+    The index of the argv-element containing the argument will be stored in the
+    <code>argIndex</code>.  If there is no argument, the field will contain
+    <code>OL_NOINDEX</code>.
+
+    <p><code>FreeOptList()</code> accepts one parameter, <code>*list</code>, a
+    pointer to the head of the <code>option_t</code> type list to be freed.
+    <code>FreeOptList()</code> will free each element in the list and set the
+    value of <code>list</code> to <code>NULL</code>.</p>
+
+    <h3>Example</h3>
+
+    <p style="margin-bottom: 0px;"><code>
+    option_t *optList, *thisOpt;<br>
+    <br>
+    /* get list of command line options and their arguments */<br>
+    optList = NULL;<br>
+    optList = GetOptList(argc, argv, "a:bcd:ef?");<br>
+    <br>
+    /* display results of parsing */<br>
+    while (optList != NULL)<br>
+    {
+    </code></p>
+
+    <div style="padding-left: 2pc;">
+    <code>
+    thisOpt = optList;<br>
+    optList = optList->next;<br>
+    <br>
+    if ('?' == thisOpt->option)<br>
+    {<br>
+    </code>
+    </div>
+
+    <div style="padding-left: 4pc;">
+    <code>
+    printf("Usage: %s &lt;options&gt;\n\n", RemovePath(argv[0]));<br>
+    printf("options:\n");<br>
+    printf("  -a : option excepting argument.\n");<br>
+    printf("  -b : option without arguments.\n");<br>
+    printf("  -c : option without arguments.\n");<br>
+    printf("  -d : option excepting argument.\n");<br>
+    printf("  -e : option without arguments.\n");<br>
+    printf("  -f : option without arguments.\n");<br>
+    printf("  -?  : print out command line options.\n\n");<br>
+    <br>
+    FreeOptList(thisOpt);   /* done with this list, free it */<br>
+    break;
+    </code>
+    </div>
+
+    <div style="padding-left: 2pc;">
+    <code>
+    }<br>
+    <br>
+    printf("found option %c\n", thisOpt->option);<br>
+    <br>
+    if (thisOpt->argument != NULL)<br>
+    {
+    </code>
+    </div>
+
+    <div style="padding-left: 4pc;">
+    <code>
+    printf("\tfound argument %s", thisOpt->argument);<br>
+    printf(" at index %d\n", thisOpt->argIndex);
+    </code>
+    </div>
+
+    <div style="padding-left: 2pc;">
+    <code>
+    }<br>
+    else<br>
+    {
+    </code>
+    </div>
+
+    <div style="padding-left: 4pc;">
+    <code>
+    printf("\tno argument for this option\n");
+    </code>
+    </div>
+
+    <div style="padding-left: 2pc;">
+    <code>
+    }<br>
+    <br>
+    free(thisOpt);    /* done with this item, free it */
+    </code>
+    </div>
+
+    <p style="margin-top: 0px;"><code>
+    }
+    </code></p>
+
+    <h3>Portability</h3>
+    <p>All the source code that I have provided is written in strict ANSI
+    C.  I would expect it to build correctly on any machine with an ANSI C
+    compiler.  I have tested the code compiled with gcc on Linux and mingw on
+    Windows XP.</p>
+
+    <hr style="width:100%;">
+
+    <a name="download"></a>
+    <h2>Actual Software</h2>
+    <p>I am releasing my implementation of the OptList() library under
+    the <a href="https://www.gnu.org/licenses/licenses.html#LGPL">
+    LGPL</a>.  The source code repository is available on
+    <a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
+    the latest revision of the master branch, unless you're looking for
+    something specific.</p>
+
+    <table summary="GitHub Repositories">
+      <tr>
+        <th valign="top" align="left">Repository Location</th>
+        <th valign="top" align="left">
+          <a href="https://github.com/michaeldipperstein/optlist">
+            https://github.com/michaeldipperstein/optlist
+          </a>
+        </th>
+      </tr>
+    </table>
+
+    <p>If you have any further questions or comments, you may contact me by
+    e-mail.  My e-mail address is:
+    <a href="mailto:mdipper@alumni.engr.ucsb.edu">mdipper@alumni.engr.ucsb.edu</a></p>
+
+</div><!-- ends main-->
+
+</div><!--container1-->
+</div><!--container2-->
+
+<p><a href="./index.html">Home</a><br>
+Last updated on <em>August 7, 2017</em></p>
+
+</body>
+</html>
