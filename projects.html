@@ -83,8 +83,8 @@
     degree between 1995 and 2000) and the work is becoming increasingly
     irrelevant, but maybe you'll find something useful.</p>
 
-    <p>If you can't get enough of my projects, check out the links in the column
-    on the right for some of the other stuff I've published.</p>
+    <p>If you can't get enough of my projects, check out the links in the
+    column on the right for some of the other stuff I've published.</p>
 
     <p>If you have nothing better to do, you can e-mail me at
     <a href="mailto:mdipper@alumni.engr.ucsb.edu">mdipper@alumni.engr.ucsb.edu
@@ -94,8 +94,7 @@
 
     <a name="atm"></a>
     <h2>Database Consistency Project</h2>
-    <p>This project was created as a team effort with the help of
-    Kevin O'Gorman
+    <p>This project was created with the help of Kevin O'Gorman
     (<a href="mailto:kogorman@cs.ucsb.edu">kogorman@cs.ucsb.edu</a>)</p>
 
     <h3>Overview</h3>
@@ -104,14 +103,14 @@
     the User Interface, the Web-Monitor, and the Data Repositories (Bank
     Branches). The components of the ATM Simulation are layered such that the
     User Interface lies on top of the Web-Monitor, which lies on top of the
-    Data Repositories. Each component of the ATM Simulation will communicate
+    Data Repositories. Each component of the ATM Simulation communicates
     only with the component layered above it and the component layered below it.
-    Each component will also be designed so that it may be monitored and
+    Each component is also designed so that it may be monitored and
     debugged through a web browser outside of the regular program operation.</p>
 
     <h3>Project Papers</h3>
 
-    <p style="padding-left: 2pc;">
+    <p>
         <a href="https://michaeldipperstein.github.io/atm/funcreqs.html">
         Functional Requirements Document</a><br>
 
@@ -125,12 +124,12 @@
 
     <h3>Project Source</h3>
 
-    <p style="padding-left: 2pc;">The ATM project source is contained in the
-    GitHub repository located at
+    <p>The ATM project source may be cloned or downloaded from this GitHub
+    repository:<br>
     <a href="https://github.com/michaeldipperstein/atm">
     https://github.com/michaeldipperstein/atm</a>.</p>
 
-    <p style="padding-left: 2pc;">The source is written in a combination of PERL
+    <p>The source is written in a combination of PERL
     script and HTML.  The PERL script files are in the repository's
     <code>cgi</code> subdirectory.  The HTML are in the repository's
     <code>html</code> subdirectory.<br><br>
@@ -154,107 +153,132 @@
 
     <hr style="width:100%;">
 
-    <p style="font-weight: bold; font-size: large;">Real-time UDP Data Mixer</p>
+    <h2>Real-time UDP Data Mixer</h2>
 
-    <p style="font-weight: bold;">Project Papers</p>
+    <h3>Overview</h3>
 
-    <p style="padding-left: 2pc;">
-    <a href="mixer/mixer.html">Description of project objectives and source
-    code</a> (Something I quickly threw together in case some one reads this
-    page.)
-    </p>
+    <p>This project was written in the latter half of a 10 week course on
+    computer networks.  The goal of the project is to demonstrate some of the
+    techniques that may be used in real-time mixing of UDP data over the
+    current IP network.  It also sheds some light on areas that require advance
+    consideration before a given data mixing service is implemented.  Such
+    areas include:</p>
 
-    <p style="font-weight: bold;">Project Source</p>
+    <ul>
+        <li>mixing method</li>
+        <li>mixing rate</li>
+        <li>packet ordering</li>
+        <li>lost packet handling</li>
+        <li>joining mixing group</li>
+        <li>leaving mixing group</li>
+        <li>mixer resource allocation</li>
+    </ul>
 
-    <p style="padding-left: 2pc;">
-    Click <a href="mixer/mixer.tar.gz">here</a> for a <strong>gzip</strong>ed
-    <strong>tar</strong> of the project source.  The source is written to
-    operate under Solaris 2.6.
-    </p>
+
+    <h3>Project Papers</h3>
+
+    <p>I quickly threw together this brief
+    <a href="https://michaeldipperstein.github.io/mixer/index.html">
+    description of the project objectives and source code</a> back in 2000.
+    hopefully it's good enough to get the job done, because the source and
+    it's comments are my only other documentation.</p>
+
+    <h3>Project Source</h3>
+
+    <p>The mixer source is written to build and execute on a Solaris 2.6
+    workstation.  I vaguely remember running it on a machine with a 32-bit
+    x86 Linux 2.2 kernel, but I may have just <code>telnet</code>ed to the
+    Solaris machine form there.</p>
+
+    <p>The UDP mixer project source may be cloned or downloaded from this GitHub
+    repository:<br>
+    <a href="https://github.com/michaeldipperstein/mixer">
+    https://github.com/michaeldipperstein/mixer</a>.</p>
 
     <hr style="width:100%;">
 
-    <p style="font-weight: bold; font-size: large;">Porting and Analysis of
-    SPLASH-2 Ocean Current Simulation</p>
+    <h2>Porting and Analysis of SPLASH-2 Ocean Current Simulation</h2>
 
-    <p style="font-weight: bold;">Project Papers</p>
+    <h3>Overview</h3>
 
-    <p style="padding-left: 2pc;">
-    <a href="https://web.archive.org/web/20110917225040/http://www-flash.stanford.edu:80/apps/SPLASH/">
-    Wayback Machine mirror of the SPLASH-2 home page</a><br>
-    <a href="ocean/sp2ocean.ps">Initial Report (PostScript)</a><br>
-    <a href="ocean/speedup.ps">Additional Results and Comparisons (PostScript)</a>
-    </p>
+    <p>This project provides information on the lessons learned and the results
+    of an attempt to translate the Stanford Parallel Applications for Shared
+    Memory (SPLASH-2) ocean simulation program (Ocean) to both Pthread an MPI
+    implementations. Ocean is one of several applications in the SPLASH-2
+    library, intended to benchmark performance on various systems. Initially I
+    set out to use the Ocean program to compare Pthread and MPI performance on
+    both an SGI Origin 2000 and a Cray T3E.  Though I did not accomplish my
+    goals, there are still several valuable lessons learned to report along the
+    way.</p>
 
-    <p style="font-weight: bold;">Project Source</p>
+    <h3>Project Papers</h3>
 
     <p>
-    Click <a href="ocean/ocean.tar.gz">here</a> for a <strong>gzip</strong>ed
-    <strong>tar</strong> of the project source (including documents).  The
-    source is written to operate on an SGI Origin 2000, though I have executed
-    the p-thread version on a Solaris machine.<br><br>
+    <a href="https://web.archive.org/web/20110917225040/http://www-flash.stanford.edu:80/apps/SPLASH/">
+        Wayback Machine mirror of the SPLASH-2 home page</a><br>
 
-    Libraries converting many of the ANL PARMACS macros for use with p-threads,
-    MPI, and fork with shm on the SGI Origin 2000 are include in the
-    <strong>tar</strong> the linked to above.
+    <a href="https://github.com/MichaelDipperstein/ocean/raw/master/docs/sp2ocean.pdf">
+        Initial Report (PDF)</a><br>
+
+    <a href="https://github.com/MichaelDipperstein/ocean/raw/master/docs/speedup.pdf">
+        Additional Results and Comparisons (PDF)</a>
     </p>
+
+    <h3>Project Source</h3>
+
+    <p>The ocean project source and documentation may be cloned or downloaded
+    from this GitHub repository:<br>
+    <a href="https://github.com/michaeldipperstein/ocean">
+    https://github.com/michaeldipperstein/ocean</a>.</p>
+
+    <p>The source is written to operate on an SGI Origin 2000, though I have
+    executed the p-thread version on a Solaris machine.</p>
+
+    <p>Libraries converting many of the ANL PARMACS macros for use with
+    pthreads, MPI, and fork with shm on the SGI Origin 2000 are include in the
+    GitHub repository.</p>
 
     <hr style="width:100%;">
 
-    <p><span style="font-weight: bold; font-size: large;">Survey of Nucleotide
-    (DNA) Database Search Techniques</span> (teamed with Matt Maxel
-    (<a href="mailto:mmaxel@isle.net">mmaxel@isle.net</a>) and Eric Indiran
-    (<a href="mailto:epi@plpt.com">epi@plpt.com</a>)</p>
+    <h2>Survey of Nucleotide (DNA) Database Search Techniques</h2>
+    <p>This project was created with the help of Matt Maxel
+    (<a href="mailto:mmaxel@isle.net">mmaxel@isle.net</a>) and
+    Eric Indiran (<a href="mailto:epi@plpt.com">epi@plpt.com</a>)</p>
 
-    <p style="padding-left: 2pc;">
-    This started as a 7 week project on &quot;DNA Sequence Alignment&quot;,
+    <h3>History</h3>
+
+    <p>This started as a 7 week project on &quot;DNA Sequence Alignment&quot;,
     after about a week of study, we came up with the following
-    <a href="dna/project.html">plan</a>. It didn't take to long to realize that
-    we were too ambitious.  The project evolved into a survey of nucleotide
-    database search techniques.
+    <a href="https://michaeldipperstein.github.io/dna/project.html">plan</a>.
+    It didn't take to long to realize that we were too ambitious.  The project
+    evolved into a survey of nucleotide database search techniques.</p>
+
+    <h3>Project Papers</h3>
+
+    <p>
+        <a href="https://michaeldipperstein.github.io/dna/dna.ppt">
+            PowerPoint presentation</a><br>
+
+        <a href="https://michaeldipperstein.github.io/dna/DNApaper.html">
+            Project paper</a><br>
+
+        <a href="https://michaeldipperstein.github.io/dna/terms.html">
+            Definitions of related terms</a>
     </p>
 
-    <p style="font-weight: bold;">Project Papers</p>
+    <h3>Project Source</h3>
 
-    <p style="padding-left: 2pc;">
-    <a href="dna/dna.ppt">PowerPoint presentation</a><br>
-    <a href="dna/DNApaper.html">Project paper</a><br>
-    <a href="dna/terms.html">Definitions of related terms</a>
-    </p>
+    <p>The source of the scripts and used for this project may be cloned or
+    downloaded from this GitHub repository:<br>
+    <a href="https://github.com/michaeldipperstein/dna">
+    https://github.com/michaeldipperstein/dna</a>.</p>
 
     <hr style="width:100%;">
 
-    <p style="font-weight: bold; font-size: large;">MLTP - A Multi-Layer Thread
-    Package for SMP Linux (Thesis Project)</p>
+    <h2>MLTP - A Multi-Layer Thread Package for SMP Linux (Thesis Project)</h2>
 
-    <p style="font-weight: bold;">Thesis Abstract</p>
-    <p>This thesis is focused on the design and implementation of an
-    open-source two-level thread package called MLTP for the Linux
-    operating system running on Intel PC SMPs.  Kernel threads
-    directly scheduled by multiprocessor OS normally have high
-    context switch cost compared to user-level threads.  User-level
-    threads scheduled within a single kernel process are not capable of
-    utilizing multiple processors.  Many parallel applications running
-    on SMPs require support for flexible control of kernel and user-level
-    threads and  such a package is not available on the Linux operating
-    system.  In the thesis talk, I will discuss an M-to-N architecture
-    for MLTP and a design for efficient synchronization and switch among
-    threads.  Such a design allows a multi-thread application to achieve
-    scalability and efficiency in multi-processor environments at a low
-    cost.  I will also present performance of MLTP for several
-    micro-benchmarks and applications on Intel Xeon dual and quad-processor
-    SMPs.</p>
-
-    <p style="font-weight: bold;">Thesis Documents and Source</p>
-
-    <p style="padding-left: 2pc;">
-    Thesis Paper <a href="mltp/mltp.ps.gz">gzip compressed postscript</a><br>
-    Thesis Presentation
-    <a href="mltp/mltppres.sdd.gz">gzip compressed Star Office 5.2 format</a>
-    <a href="mltp/slides/slides.htm">HTML format</a><br>
-    <a href="mltp/mltp-1_00.tar.gz">MLTP Source (compressed archive)</a><br>
-    <a href="mltp/benchmark.tar.gz">MLTP Benchmarks (compressed archive)</a><br>
-    </p>
+    <p>This was my MSCS thesis project.  Please see my <a href="mltp.html">
+    thesis project web page</a> for more information on this project.</p>
 </div><!-- ends main-->
 
 </div><!--container1-->
