@@ -156,9 +156,22 @@
 
     <h3>UDP Clients</h3>
     <ol>
-        <li>Create a UDP/IP socket with the <code>socket()</code> command.</li>
-        <li>Populate a <code>struct sockaddr_in</code> with information about
-        the desired server.</li>
+        <li>Populate a <code>struct addrinfo</code> with information about
+        the server that you want to connect to.</li>
+        <li>Use the <code>getaddrinfo()</code> command to get a linked list of
+        potential Internet addresses matching your request.</li>
+        <li>Create a socket with the <code>socket()</code> command on one of the
+        addresses returned by <code>getaddrinfo()</code>.
+            <ul>
+                <li>If the <code>socket()</code> returns with success, copy
+                the <code>struct sockaddr</code> that you used, then use
+                <code>freeaddrinfo()</code> to free-up the memory that
+                <code>getaddrinfo()</code> allocated.</li>
+                <li>If the <code>socket()</code> returns with failure, repeat
+                this step with the next address from the
+                <code>struct addrinfo</code> linked list.</li>
+            </ul>
+        </li>
         <li>Receive incoming data with the <code>recvfrom()</code> command.</li>
         <li>Transmit outgoing data with the <code>sendto()</code> command.</li>
         <li>When you're done with the socket, close it using the
