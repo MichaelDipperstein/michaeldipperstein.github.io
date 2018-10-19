@@ -111,12 +111,13 @@
 
     <h2>Optlist Library</h2>
     <h3>Introduction</h3>
-    <p>The optlist library provides the functions <code>GetOptList()</code> and
-    <code>FreeOptList()</code>.  The <code>GetOptList()</code> function is
-    similar to <code>getopt()</code>.  Its most notable differences are that
-    it returns a linked list to the command line arguments and their parameters.
-    One call to <code>GetOptList()</code> will return all of the command line
-    options and their arguments.</p>
+    <p>The optlist library provides the functions <code>GetOptList()</code>,
+    <code>FreeOptList()</code>, and a bonus function <code>FindFileName()</code>.
+    The <code>GetOptList()</code> function is similar to <code>getopt()</code>.
+    Its most notable differences are that it returns a linked list to the
+    command line arguments and their parameters. One call to
+    <code>GetOptList()</code> will return all of the command line options and
+    their arguments.</p>
 
     <p style="margin-bottom: 0px;">Other Differences:</p>
     <ul style="margin-top: 0px;">
@@ -127,6 +128,10 @@
         <li>Unfortunately, <code>GetOptList()</code> allocates memory which must
         be freed one element at a time or by calling <code>FreeOptList()</code>
     </ul>
+
+    <p><code>FindFileName()</code> is a bonus function that returns a pointer
+    to the start of a file name in an array of <code>char</code> containing a
+    path including the file name.</p>
 
     <h3>New Types and Prototypes</h3>
     <p style="margin-bottom: 0px;"><code>
@@ -204,7 +209,7 @@
 
     <div style="padding-left: 4pc;">
     <code>
-    printf("Usage: %s &lt;options&gt;\n\n", RemovePath(argv[0]));<br>
+    printf("Usage: %s &lt;options&gt;\n\n", FindFileName(argv[0]));<br>
     printf("options:\n");<br>
     printf("  -a : option excepting argument.\n");<br>
     printf("  -b : option without arguments.\n");<br>
@@ -265,9 +270,9 @@
 
     <h3>Portability</h3>
     <p>All the source code that I have provided is written in strict ANSI
-    C.  I would expect it to build correctly on any machine with an ANSI C
-    compiler.  I have tested the code compiled with gcc on Linux and mingw on
-    Windows XP.</p>
+    C.  I would expect it to build correctly on any machine with an ANSI C or
+    ISO C++ compiler.  I have tested the code compiled with gcc on Linux and
+    mingw on Windows.</p>
 
     <hr style="width:100%;">
 
