@@ -1,0 +1,162 @@
+body
+{
+    color: #000000;
+    background: #CCCCCC;
+}
+
+a:link
+{
+    color: #0000CC;
+}
+
+a:visited
+{
+    color: #660066;
+}
+
+a:active
+{
+    color: #660066;
+}
+
+#header
+{
+    color: black;
+    position: relative;
+}
+
+#header h1, #header h2, #header h3, #header p
+{
+    text-align: center;
+}
+
+#api
+{
+}
+
+#api h4
+{
+    margin-bottom: 0em;
+}
+
+#api code
+{
+    font-family: monospace;
+    font-weight: bold;
+}
+
+#api .section
+{
+    margin-bottom: 0em;
+}
+
+#api .indent
+{
+    margin-top: 0em;
+    margin-left: 2em;
+}
+
+.navbar
+{
+  overflow: hidden;
+  color: black;
+  background-color: aqua;
+}
+
+.navbar a
+{
+  float: left;
+  font-size: medium;
+  color: black;
+  text-align: center;
+  padding: 1em 1em;
+  text-decoration: none;
+}
+
+.dropdown
+{
+  float: left;
+  color: black;
+  overflow: hidden;
+}
+
+.dropdown .dropbutton
+{
+  font-size: medium;
+  border: none;
+  outline: none;
+  color: black;
+  padding: 1em 1em;
+  background-color: aqua;
+  font-family: inherit;
+  margin: 0;
+}
+
+.navbar a:hover, .dropdown:hover .dropbutton
+{
+  background-color: dodgerblue;
+}
+
+.dropdown-items
+{
+  display: none;
+  position: absolute;
+  background-color: LightBlue;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+.dropdown-items a
+{
+  float: none;
+  color: dodgerblue;
+  padding: 0.5em 1em;
+  text-decoration: none;
+  display: block;
+  text-align: left;
+}
+
+.dropdown-items a:hover
+{
+  background-color: #CCCCCC;
+}
+
+.dropdown:hover .dropdown-items
+{
+  display: block;
+}
+
+.dtable
+{
+    border: 1px solid;
+    border-collapse: separate;
+}
+
+.dtable table
+{
+    border: 1px solid;
+    border-collapse: separate;
+}
+
+.dtable th
+{
+    font-weight: bold;
+    border: 1px solid;
+}
+
+.dtable td
+{
+    border: 1px solid;
+}
+
+.repotable
+{
+    border: none;
+}
+
+.repotable th
+{
+    font-weight: bold;
+    text-align: left;
+    vertical-align: top;
+}

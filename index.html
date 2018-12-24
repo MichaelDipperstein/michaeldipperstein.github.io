@@ -1,116 +1,98 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-"http://www.w3.org/TR/html4/strict.dtd">
-
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <title>Michael Dipperstein's GitHub Site</title>
-<meta http-equiv="content-type" content="text/html; charset=utf-8">
-<meta name="generator" content="quanta">
-<meta name="keywords"
-content="projects crypt3 compression mltp linux threads">
-<meta name="keywords" content="Michael Dipperstein">
+<meta charset="UTF-8">
+<meta name="author" content="Michael Dipperstein">
+<meta name="keywords" content="projects crypt3 compression mltp linux threads">
 <meta name="description" content="This is the GitHub page of Michael
 Dipperstein.  It contains links to my projects' GitHub repos">
-<link rel="stylesheet" href="twocol.css" type="text/css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="newlook.css" type="text/css">
 </head>
 
 <body>
 
-<div id="container2">
-<div id="container1">
+<div class="navbar">
+    <a href="./index.html">Home</a>
 
-<div id="navbar">
-    <h1>Project Index</h1>
-    <hr style="width:90%;text-align: center;">
-
-    <p><a href="./index.html">Home</a></p>
-
-    <h2>Compression</h2>
-    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
-    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
-    <a href="./delta.html">Delta Coding</a><br>
-    <a href="./freq.html">Frequency Substitution</a><br>
-    <a href="./huffman.html">Huffman Coding</a><br>
-    <a href="./lzss.html">LZSS Coding</a><br>
-    <a href="./lzw.html">LZW Coding</a><br>
-    <a href="./rice.html">Rice (Golomb) Coding</a><br>
-    <a href="./rle.html">Run Length Encoding</a></p>
-
-    <h2>Misc. Programming</h2>
-    <p><a href="./projects.html">School Projects</a><br>
-    <a href="./mltp.html">Thesis Project</a><br>
-    <a href="./crypt.html">crypt(3) Source</a><br>
-    <a href="./hamming.html">Hamming Codes</a><br>
-    <a href="./bitarray.html">Bit Array Libraries</a><br>
-    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
-    <a href="./sqrt.html">Square Root Approximation Library</a><br>
-    <a href="./sort.html">Sort Library</a><br>
-    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
-    <a href="./optlist.html">Command Line Option Parser</a><br>
-    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
-    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
-    <a href="./ezini.html">INI File Parser and Creator</a><br>
-    <a href="./sockets.html">Berkeley Sockets Examples</a></p>
-
-    <hr style="width:90%;text-align: center;">
-
-    <h1>Obligatory Links</h1>
-    <a href="http://counter.li.org/">
-        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
-        width="125" height="72">
-    </a><br>
-
-    <a href="https://validator.w3.org/check?uri=referer">
-        <img src="https://www.w3.org/Icons/valid-html401"
-        alt="Valid HTML 4.01 Strict" height="31" width="88">
-    </a>
-</div><!-- ends navbar-->
-
-<div id="main">
-    <div id="header">
-        <h1>Michael Dipperstein's GitHub Site</h1>
+    <div class="dropdown">
+        <button class="dropbutton">Compression</button>
+        <div class="dropdown-items">
+            <a href="./arithmetic.html">Arithmetic Coding</a>
+            <a href="./bwt.html">Burrows-Wheeler Transform</a>
+            <a href="./delta.html">Delta Coding</a>
+            <a href="./freq.html">Frequency Substitution</a>
+            <a href="./huffman.html">Huffman Coding</a>
+            <a href="./lzss.html">LZSS Coding</a>
+            <a href="./lzw.html">LZW Coding</a>
+            <a href="./rice.html">Rice (Golomb) Coding</a>
+            <a href="./rle.html">Run Length Encoding</a>
+        </div>
     </div>
 
-    <hr style="width:100%;">
+    <div class="dropdown">
+        <button class="dropbutton">Misc. Programming</button>
+        <div class="dropdown-items">
+            <a href="./projects.html">School Projects</a>
+            <a href="./mltp.html">Thesis Project</a>
+            <a href="./crypt.html">crypt(3) Source</a>
+            <a href="./hamming.html">Hamming Codes</a>
+            <a href="./bitarray.html">Bit Array Libraries</a>
+            <a href="./bitfile.html">Bit File Stream Libraries</a>
+            <a href="./sqrt.html">Square Root Approximation Library</a>
+            <a href="./sort.html">Sort Library</a>
+            <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a>
+            <a href="./optlist.html">Command Line Option Parser</a>
+            <a href="./stopwatch.html">POSIX Stopwatch Library</a>
+            <a href="./keypress.html">POSIX Wait for Key Press</a>
+            <a href="./ezini.html">INI File Parser and Creator</a>
+            <a href="./sockets.html">Berkeley Sockets Examples</a>
+        </div>
+    </div>
+</div><!-- ends navbar-->
 
-    <p>Welcome to my GitHub project site.  I've been a professional software
-    engineer since 1990.  If I was a really good software engineer, I'd have
-    a dynamically updating counter displaying how many years that is.
-    However, the bulk of my experience is with real-time embedded systems,
-    not web page design.</p>
+<div id="header">
+    <h1>Michael Dipperstein's GitHub Site</h1>
+</div>
 
-    <p>Absolutely none of the code on this site has anything to do with
-    any of my professional work.  It's all hobby work.  I went through a
-    period when I was playing with data compression for a while and the results
-    have become a large part of this site.  I hope some of my hobby work may
-    actually be of use to you.</p>
+<hr style="width:100%;">
 
-    <p>For those of you that insist my web page would not be complete
-    without a picture of me, just scroll down a bit.  I'm the human.  The statue
-    is an <a href="https://www.mlb.com/dodgers">LA Dodgers</a> pig.  The venue
-    is Dodger Stadium.  The picture was taken before the start of the 2014 LA
-    Marathon.</p>
+<p>Welcome to my GitHub project site.  I've been a professional software
+engineer since 1990.  If I was a really good software engineer, I'd have
+a dynamically updating counter displaying how many years that is.
+However, the bulk of my experience is with real-time embedded systems,
+not web page design.</p>
 
-    <img src="img/meandpig.jpg"
-    style="border:0px; display: block;margin-left: auto; margin-right: auto;"
-    alt="Me at the LA Marathon next to a Dodgers pig" width="512">
+<p>Absolutely none of the code on this site has anything to do with
+any of my professional work.  It's all hobby work.  I went through a
+period when I was playing with data compression for a while and the results
+have become a large part of this site.  I hope some of my hobby work may
+actually be of use to you.</p>
 
-    <p>I've run a bunch of half marathons and marathons before and after the one
-    in the photo.  There are photos of me from every one of those runs, most
-    of the other photos have me with distorted facial expressions.  If you think
-    the picture above is bad, you should see the others.</p>
+<p>For those of you that insist my web page would not be complete
+without a picture of me, just scroll down a bit.  I'm the human.  The statue
+is an <a href="https://www.mlb.com/dodgers">LA Dodgers</a> pig.  The venue
+is Dodger Stadium.  The picture was taken before the start of the 2014 LA
+Marathon.</p>
 
-    <p>If you have any questions or nothing better to do, feel free to
-    e-mail me at <a href="mailto:mdipperstein@gmail.com">
-    mdipperstein@gmail.com</a>.  Who knows, maybe your e-mail will
-    become part of my stuff.</p>
-</div><!-- ends main-->
+<img src="img/meandpig.jpg"
+style="border:0px; display: block;margin-left: auto; margin-right: auto;"
+alt="Me at the LA Marathon next to a Dodgers pig" width="512">
 
-</div><!--container1-->
-</div><!--container2-->
+<p>I've run a bunch of half marathons and marathons before and after the one
+in the photo.  There are photos of me from every one of those runs, most
+of the other photos have me with distorted facial expressions.  If you think
+the picture above is bad, you should see the others.</p>
 
-<p><a href="index.html">Home</a><br>
-Last updated on <em>July 31, 2017</em></p>
+<p>If you have any questions or nothing better to do, feel free to
+e-mail me at <a href="mailto:mdipperstein@gmail.com">
+mdipperstein@gmail.com</a>.  Who knows, maybe your e-mail will
+become part of my stuff.</p>
+
+<a href="index.html">Home</a>
+
+<p>Last updated on <em>December 23, 2018</em></p>
 
 </body>
 </html>
