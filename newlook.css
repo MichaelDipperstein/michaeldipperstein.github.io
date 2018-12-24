@@ -149,6 +149,30 @@ a:active
     border: 1px solid;
 }
 
+
+.single-boarder-table
+{
+    border: 1px solid;
+    border-collapse: collapse;
+}
+
+.single-boarder-table table
+{
+    border: 1px solid;
+    border-collapse: collapse;
+}
+
+.single-boarder-table th
+{
+    font-weight: bold;
+    border: 1px solid;
+}
+
+.single-boarder-table td
+{
+    border: 1px solid;
+}
+
 .repotable
 {
     border: none;
