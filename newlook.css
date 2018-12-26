@@ -126,25 +126,30 @@ a:active
   display: block;
 }
 
-.dtable
+.double-boarder-table
 {
     border: 1px solid;
     border-collapse: separate;
 }
 
-.dtable table
+.double-boarder-table table
 {
     border: 1px solid;
     border-collapse: separate;
 }
 
-.dtable th
+.double-boarder-table caption
+{
+    caption-side:bottom;
+}
+
+.double-boarder-table th
 {
     font-weight: bold;
     border: 1px solid;
 }
 
-.dtable td
+.double-boarder-table td
 {
     border: 1px solid;
 }
@@ -160,6 +165,11 @@ a:active
 {
     border: 1px solid;
     border-collapse: collapse;
+}
+
+.single-boarder-table caption
+{
+    caption-side:bottom;
 }
 
 .single-boarder-table th

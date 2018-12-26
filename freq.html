@@ -1,803 +1,803 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-"http://www.w3.org/TR/html4/strict.dtd">
-
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <title>Frequency Substitution Encoding Discussion and Implementation</title>
-<meta http-equiv="content-type" content="text/html; charset=utf-8">
-<meta name="generator" content="quanta">
+<meta charset="UTF-8">
+<meta name="author" content="Michael Dipperstein">
 <meta name="keywords"
 content="Frequency Substitution Encoding Compression Source Sorting">
-<link rel="stylesheet" href="./twocol.css" type="text/css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="newlook.css" type="text/css">
 </head>
-
 <body>
 
-<div id="container2">
-<div id="container1">
+<div class="navbar">
+    <a href="./index.html">Home</a>
 
-<div id="navbar">
-    <h1>Project Index</h1>
-    <hr style="width:90%;text-align: center;">
-
-    <p><a href="./index.html">Home</a></p>
-
-    <h2>Compression</h2>
-    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
-    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
-    <a href="./delta.html">Delta Coding</a><br>
-    <a href="./freq.html">Frequency Substitution</a><br>
-    <a href="./huffman.html">Huffman Coding</a><br>
-    <a href="./lzss.html">LZSS Coding</a><br>
-    <a href="./lzw.html">LZW Coding</a><br>
-    <a href="./rice.html">Rice (Golomb) Coding</a><br>
-    <a href="./rle.html">Run Length Encoding</a></p>
-
-    <h2>Misc. Programming</h2>
-    <p><a href="./projects.html">School Projects</a><br>
-    <a href="./mltp.html">Thesis Project</a><br>
-    <a href="./crypt.html">crypt(3) Source</a><br>
-    <a href="./hamming.html">Hamming Codes</a><br>
-    <a href="./bitarray.html">Bit Array Libraries</a><br>
-    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
-    <a href="./sqrt.html">Square Root Approximation Library</a><br>
-    <a href="./sort.html">Sort Library</a><br>
-    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
-    <a href="./optlist.html">Command Line Option Parser</a><br>
-    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
-    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
-    <a href="./ezini.html">INI File Parser and Creator</a><br>
-    <a href="./sockets.html">Berkeley Sockets Examples</a></p>
-
-    <hr style="width:90%;text-align: center;">
-
-    <h1>Obligatory Links</h1>
-    <a href="http://counter.li.org/">
-        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
-        width="125" height="72">
-    </a><br>
-
-    <a href="https://validator.w3.org/check?uri=referer">
-        <img src="https://www.w3.org/Icons/valid-html401"
-        alt="Valid HTML 4.01 Strict" height="31" width="88">
-    </a>
-</div><!-- ends navbar-->
-
-<div id="main">
-    <div id="header">
-        <h1>Frequency Substitution Encoding Discussion and Implementation</h1>
-        <h3>by Michael Dipperstein</h3>
+    <div class="dropdown">
+        <button class="dropbutton">Compression</button>
+        <div class="dropdown-items">
+            <a href="./arithmetic.html">Arithmetic Coding</a>
+            <a href="./bwt.html">Burrows-Wheeler Transform</a>
+            <a href="./delta.html">Delta Coding</a>
+            <a href="./freq.html">Frequency Substitution</a>
+            <a href="./huffman.html">Huffman Coding</a>
+            <a href="./lzss.html">LZSS Coding</a>
+            <a href="./lzw.html">LZW Coding</a>
+            <a href="./rice.html">Rice (Golomb) Coding</a>
+            <a href="./rle.html">Run Length Encoding</a>
+        </div>
     </div>
 
-    <hr style="width:100%;">
+    <div class="dropdown">
+        <button class="dropbutton">Misc. Programming</button>
+        <div class="dropdown-items">
+            <a href="./projects.html">School Projects</a>
+            <a href="./mltp.html">Thesis Project</a>
+            <a href="./crypt.html">crypt(3) Source</a>
+            <a href="./hamming.html">Hamming Codes</a>
+            <a href="./bitarray.html">Bit Array Libraries</a>
+            <a href="./bitfile.html">Bit File Stream Libraries</a>
+            <a href="./sqrt.html">Square Root Approximation Library</a>
+            <a href="./sort.html">Sort Library</a>
+            <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a>
+            <a href="./optlist.html">Command Line Option Parser</a>
+            <a href="./stopwatch.html">POSIX Stopwatch Library</a>
+            <a href="./keypress.html">POSIX Wait for Key Press</a>
+            <a href="./ezini.html">INI File Parser and Creator</a>
+            <a href="./sockets.html">Berkeley Sockets Examples</a>
+        </div>
+    </div>
+</div><!-- ends navbar-->
 
-    <p>Frequency Substitution is a term I made up for a transformation that
-    I saw discussed on another web site.  I have since lost the link to
-    the site, but if somebody can find it I'll be happy to reference it.</p>
+<div id="header">
+    <h1>Frequency Substitution Encoding Discussion and Implementation</h1>
+    <h3>by Michael Dipperstein</h3>
+</div>
 
-    <p>The idea behind Frequency Substitution is simple.  The goal is to
-    transform data by replacing the highest frequency symbols with the
-    lowest values.  It sounded simple enough, so I thought that I'd give it
-    a try.</p>
+<hr style="width:100%;">
 
-    <p>Normally this type of transformation doesn't produce useful results,
-    but there are a few compression techniques, such as
-    <a href="./rice.html">Rice (Golomb) Coding</a>, that produce
-    smaller code words for lower value symbols.  By making the lower valued
-    symbols the most frequent symbols, these encoding schemes may achieve
-    better compression ratios.</p>
+<p>Frequency Substitution is a term I made up for a transformation that
+I saw discussed on another web site.  I have since lost the link to
+the site, but if somebody can find it I'll be happy to reference it.</p>
 
-    <p>As with my other compression implementations, my intent is to
-    publish an easy to follow ANSI C implementation of frequency
-    substitution encoding and decoding.  Anyone familiar with ANSI C should
-    be able to follow and learn from my implementation.  I'm sure that
-    there's room for improvement of speed and memory usage, but this project
-    is about learning and sharing, not perfection.</p>
+<p>The idea behind Frequency Substitution is simple.  The goal is to
+transform data by replacing the highest frequency symbols with the
+lowest values.  It sounded simple enough, so I thought that I'd give it
+a try.</p>
 
-    <p>Click here for a link to my <a href="#download">frequency
-    substitution source</a>.  The rest of this page discusses the concepts
-    involved with frequency substitution and my implementation.</p>
+<p>Normally this type of transformation doesn't produce useful results,
+but there are a few compression techniques, such as
+<a href="./rice.html">Rice (Golomb) Coding</a>, that produce
+smaller code words for lower value symbols.  By making the lower valued
+symbols the most frequent symbols, these encoding schemes may achieve
+better compression ratios.</p>
 
-    <hr style="width:100%;">
+<p>As with my other compression implementations, my intent is to
+publish an easy to follow ANSI C implementation of frequency
+substitution encoding and decoding.  Anyone familiar with ANSI C should
+be able to follow and learn from my implementation.  I'm sure that
+there's room for improvement of speed and memory usage, but this project
+is about learning and sharing, not perfection.</p>
 
-    <a name="overview"></a>
-    <h2>Algorithm Overview</h2>
-    <p>The goal of frequency substitution is to transform data by replacing
-    the highest frequency symbols with the lowest values.  In a data set
-    contains 256 unique symbols, the most common symbol will be replaced
-    with 0 and the least common symbol will be replaced with 255.</p>
+<p>Click here for a link to my <a href="#download">frequency
+substitution source</a>.  The rest of this page discusses the concepts
+involved with frequency substitution and my implementation.</p>
 
-    <h3>Encoding</h3>
-    <p>Encoding a data stream using frequency substitution is a two pass
-    process.  The first pass is used to count the frequency of the symbols.
-    After the first pass, a table of substitution codes is generated.  Then
-    a second pass is made, where an encoded data set is generated using
-    the substitution table.</p>
+<hr style="width:100%;">
 
-    <p>The first pass should be straight forward, start with a table
-    indicating a frequency of 0 for all possible symbols, then add 1 to
-    a symbol's frequency count every time it is encountered in the data
-    stream.  Next sort the substitution table most frequent to least
-    frequent.</p>
+<h2 id="overview">Algorithm Overview</h2>
+<p>The goal of frequency substitution is to transform data by replacing
+the highest frequency symbols with the lowest values.  In a data set
+contains 256 unique symbols, the most common symbol will be replaced
+with 0 and the least common symbol will be replaced with 255.</p>
 
-    <p>On the second pass, write out enough information for the decoder to
-    reconstruct the table, then read in each unencoded symbol and write out
-    the sorted position of that symbol.</p>
+<h3>Encoding</h3>
+<p>Encoding a data stream using frequency substitution is a two pass
+process.  The first pass is used to count the frequency of the symbols.
+After the first pass, a table of substitution codes is generated.  Then
+a second pass is made, where an encoded data set is generated using
+the substitution table.</p>
 
-    <p><strong>Example:</strong><br>
-    Given a symbol set of 0 ... 9, encode the following data stream:<br>
-    3,1,4,1,5,9,2,6,5,3,5,8,9,7,9,3,2,3,8,4,6,2,6,4,3,3,8,3,2,7,9</p>
+<p>The first pass should be straight forward, start with a table
+indicating a frequency of 0 for all possible symbols, then add 1 to
+a symbol's frequency count every time it is encountered in the data
+stream.  Next sort the substitution table most frequent to least
+frequent.</p>
 
-    <p>Based on the discussion above, encoding input consists of the
-    following steps:</p>
+<p>On the second pass, write out enough information for the decoder to
+reconstruct the table, then read in each unencoded symbol and write out
+the sorted position of that symbol.</p>
 
-    <p><strong>Step 1.</strong> Start with an empty table.</p>
+<p><strong>Example:</strong><br>
+Given a symbol set of 0 ... 9, encode the following data stream:<br>
+3,1,4,1,5,9,2,6,5,3,5,8,9,7,9,3,2,3,8,4,6,2,6,4,3,3,8,3,2,7,9</p>
 
-    <table style="text-align: center;" border="1" summary="Empty Table">
-        <tr style="font-weight:bold;">
-            <th>Symbol</th>
-            <th>Count</th>
+<p>Based on the discussion above, encoding input consists of the
+following steps:</p>
+
+<p><strong>Step 1.</strong> Start with an empty table.</p>
+
+<table class="double-boarder-table"  style="text-align: center;">
+    <caption>
+        TABLE 1.  Empty Table
+    </caption>
+    <tbody>
+
+    <tr>
+        <th style="padding-left: 1em; padding-right: 1em;">Symbol</th>
+        <th style="padding-left: 1em; padding-right: 1em;">Count</th>
+    </tr>
+
+    <tr>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+
+    <tr>
+        <td>1</td>
+        <td>0</td>
+    </tr>
+
+    <tr>
+        <td>2</td>
+        <td>0</td>
+    </tr>
+
+    <tr>
+        <td>3</td>
+        <td>0</td>
+    </tr>
+
+    <tr>
+        <td>4</td>
+        <td>0</td>
+    </tr>
+
+    <tr>
+        <td>5</td>
+        <td>0</td>
+    </tr>
+
+    <tr>
+        <td>6</td>
+        <td>0</td>
+    </tr>
+
+    <tr>
+        <td>7</td>
+        <td>0</td>
+    </tr>
+
+    <tr>
+        <td>8</td>
+        <td>0</td>
+    </tr>
+
+    <tr>
+        <td>9</td>
+        <td>0</td>
+    </tr>
+</table>
+
+
+<p><strong>Step 2.</strong> Generate a frequency table for the data
+stream.</p>
+
+<table class="double-boarder-table"  style="text-align: center;">
+    <caption>
+        TABLE 2.  Completed Table
+    </caption>
+    <tbody>
+
+    <tr>
+        <th style="padding-left: 1em; padding-right: 1em;">Symbol</th>
+        <th style="padding-left: 1em; padding-right: 1em;">Count</th>
+    </tr>
+
+    <tr>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+
+    <tr>
+        <td>1</td>
+        <td>2</td>
+    </tr>
+
+    <tr>
+        <td>2</td>
+        <td>4</td>
+    </tr>
+
+    <tr>
+        <td>3</td>
+        <td>7</td>
+    </tr>
+
+    <tr>
+        <td>4</td>
+        <td>3</td>
+    </tr>
+
+    <tr>
+        <td>5</td>
+        <td>3</td>
+    </tr>
+
+    <tr>
+        <td>6</td>
+        <td>3</td>
+    </tr>
+
+    <tr>
+        <td>7</td>
+        <td>2</td>
+    </tr>
+
+    <tr>
+        <td>8</td>
+        <td>3</td>
+    </tr>
+
+    <tr>
+        <td>9</td>
+        <td>4</td>
+    </tr>
+</table>
+
+<p><strong>Step 3.</strong> Sort the symbols by frequency.</p>
+
+<table class="double-boarder-table"  style="text-align: center;">
+    <caption>
+        TABLE 3.  Sorted Frequencies
+    </caption>
+    <tbody>
+
+    <tr>
+        <th style="padding-left: 1em; padding-right: 1em;">Symbol<br>Position</th>
+        <th style="padding-left: 1em; padding-right: 1em;">Symbol</th>
+        <th style="padding-left: 1em; padding-right: 1em;">Count</th>
+    </tr>
+
+    <tr>
+        <td>0</td>
+        <td>3</td>
+        <td>7</td>
+    </tr>
+
+    <tr>
+        <td>1</td>
+        <td>2</td>
+        <td>4</td>
+    </tr>
+
+    <tr>
+        <td>2</td>
+        <td>9</td>
+        <td>4</td>
+    </tr>
+
+    <tr>
+        <td>3</td>
+        <td>4</td>
+        <td>3</td>
+    </tr>
+
+    <tr>
+        <td>4</td>
+        <td>5</td>
+        <td>3</td>
+    </tr>
+
+    <tr>
+        <td>5</td>
+        <td>6</td>
+        <td>3</td>
+    </tr>
+
+    <tr>
+        <td>6</td>
+        <td>8</td>
+        <td>3</td>
+    </tr>
+
+    <tr>
+        <td>7</td>
+        <td>1</td>
+        <td>2</td>
+    </tr>
+
+    <tr>
+        <td>8</td>
+        <td>7</td>
+        <td>2</td>
+    </tr>
+
+    <tr>
+        <td>9</td>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+</table>
+
+<p><strong>Step 4.</strong> Write out the encoded data by substituting a
+symbol for it's position in the frequency table.<br><br>
+
+3,1,4,1,5,9,2,6,5,3,5,8,9,7,9,3,2,3,8,4,6,2,6,4,3,3,8,3,2,7,9<br>
+becomes<br>
+0,7,3,7,4,2,1,5,4,0,4,6,2,8,2,0,1,0,6,3,5,1,5,3,0,0,6,0,1,8,2</p>
+
+<p>A quick sanity check shows that the sum of the symbols in the
+initial string (150) is greater than the sum of symbols in the
+encoded string (96) so we must have lowered the average symbol value.
+</p>
+
+<h3 id="decoding">Decoding</h3>
+<p>Decoding data that has been encoded by frequency substitution is a
+single pass process.  Given a table of frequency substitutions,
+reverse the substitutions preformed during the encoding process.</p>
+
+<p><strong>Example:</strong><br>
+The following sequence and table of frequency substitutions<br>
+0,7,3,7,4,2,1,5,4,0,4,6,2,8,2,0,1,0,6,3,5,1,5,3,0,0,6,0,1,8,2</p>
+
+<table class="double-boarder-table"  style="text-align: center;">
+    <caption>
+        TABLE 4.  Sorted Frequencies
+    </caption>
+    <tbody>
+
+    <tr>
+        <th style="padding-left: 1em; padding-right: 1em;">Symbol<br>Position</th>
+        <th style="padding-left: 1em; padding-right: 1em;">Symbol</th>
+        <th style="padding-left: 1em; padding-right: 1em;">Count</th>
+    </tr>
+
+    <tr>
+        <td>0</td>
+        <td>3</td>
+        <td>7</td>
+    </tr>
+
+    <tr>
+        <td>1</td>
+        <td>2</td>
+        <td>4</td>
+    </tr>
+
+    <tr>
+        <td>2</td>
+        <td>9</td>
+        <td>4</td>
+    </tr>
+
+    <tr>
+        <td>3</td>
+        <td>4</td>
+        <td>3</td>
+    </tr>
+
+    <tr>
+        <td>4</td>
+        <td>5</td>
+        <td>3</td>
+    </tr>
+
+    <tr>
+        <td>5</td>
+        <td>6</td>
+        <td>3</td>
+    </tr>
+
+    <tr>
+        <td>6</td>
+        <td>8</td>
+        <td>3</td>
+    </tr>
+
+    <tr>
+        <td>7</td>
+        <td>1</td>
+        <td>2</td>
+    </tr>
+
+    <tr>
+        <td>8</td>
+        <td>7</td>
+        <td>2</td>
+    </tr>
+
+    <tr>
+        <td>9</td>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+</table>
+
+<p>Produces the following sequence<br>
+3,1,4,1,5,9,2,6,5,3,5,8,9,7,9,3,2,3,8,4,6,2,6,4,3,3,8,3,2,7,9</p>
+
+<p>If you were paying attention, you're probably wondering how the
+encoder passed the table of frequency substitutions to the decoder.  The
+next section provides some ideas and discusses my implementations.</p>
+
+<h3 id="key">The Substitution Key</h3>
+<p>Before the decoder can do anything with the encoded data, it needs
+a key that tells it how to undo the substitutions.  Since the key is
+needed immediately, it makes sense for the encoder to output the  key
+before it outputs the encoded data.</p>
+
+<p>So what kind of information do we need to have in the key?  In order
+for the key to be useful, it must contain the original symbol and the
+value that it was substituted for.</p>
+
+<p>If there are N possible symbols, the simplest thing to do is write
+out the complete list of all N (symbol, substitution) pairs.  Such a
+list contains 2 &times; N entries.  My goal was to use frequency
+substitution for data compression, so it would be nice if the list
+could be made even smaller.</p>
+
+<p>As it turns out there are at least three ways to make the list
+smaller:</p>
+<ol>
+<li>Only transmit keys for symbols that appear in the data.</li>
+<li>Use the position of the list entries as the symbol value and the
+value at that position as the substitution representing the symbol.</li>
+<li>Use the position of the list entries as the substitution value and the
+value at that position as the symbol that the substitution encodes.</li>
+</ol>
+
+<p>I chose to use the position as the code word.</p>
+
+<h4 id="position">Position As Code Word Value</h4>
+<p>Since the substitution key is the first thing output by the encoder,
+the key for all N symbols may be output in positions 0 ... (N - 1).
+Position 0 contains the symbol represented by the substitution 0, position 1
+contains the symbol represented by substitution 1, and so on  This method
+requires just N entries for N (substitution, symbol) pairs.</p>
+
+<h4>Excluding Unused Symbols</h4>
+<p>Sometimes the data being encoded is sparse; it only uses a fraction
+of all of the symbols in the symbol set.  In this case there will be
+a large number of unneeded entries in a <a href="#position">position
+indexed key</a>.</p>
+
+<p>For spare data sets, we can omit any symbol that isn't encoded, but
+to do that, the there has to be a way to indicate to the decoder that
+there are no more (substitution, symbol) pairs.  I do this by repeating
+the previous symbol value.</p>
+
+<p><strong>Example:</strong><br>
+The substitution key for the <a href="#decoding">decoding</a> example is
+written as the sequence 3,2,9,4,5,6,8,1,7,7.</p>
+
+<h3>Effectiveness</h3>
+<p>If you actually read my introduction, you'd notice that I thought
+frequency substitution might be helpful when used with
+<a href="./rice.html">Rice (Golomb) Coding</a>.  In order to
+test that theory, I used the
+<a href="https://en.wikipedia.org/wiki/Calgary_corpus">Calgary Corpus</a>
+as a test data set.</p>
+
+<p>The table below shows the results of applying frequency substitution
+to the Calgary Corpus and then using Rice coding (with K = 4 and K = 2) to
+compress encoded files.  Both position indexed and sparse versions of my
+frequency substitution implemention were used.  For reference, the
+table also provides results for Rice coding alone and Rice coding with
+<a href="./bwt.html">BWT</a> and <a href="./bwt.html#mtf">MTF</a>.</p>
+
+<table class="single-boarder-table">
+    <caption>
+        TABLE 5.  Effectiveness
+    </caption>
+    <tbody>
+        <tr style="text-align: center; vertical-align: bottom;">
+            <th rowspan=2 style="width: 12.5%; text-align: left;">File</th>
+            <th rowspan=2 style="width: 12.5%;">Orig</th>
+            <th colspan=3>K = 4</th>
+            <th colspan=3>K = 2</th>
         </tr>
-
-        <tr>
-            <td>0</td>
-            <td>0</td>
+        <tr style="text-align: center; vertical-align: bottom;">
+            <th style="width: 12.5%;">Rice</th>
+            <th style="width: 12.5%;">BWT + Rice</th>
+            <th style="width: 12.5%;">FreqSub + Rice</th>
+            <th style="width: 12.5%;">Rice</th>
+            <th style="width: 12.5%;">BWT + Rice</th>
+            <th style="width: 12.5%;">FreqSub + Rice</th>
         </tr>
-
-        <tr>
-            <td>1</td>
-            <td>0</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">bib</td>
+            <td>111261</td>
+            <td>132690</td>
+            <td>73271</td>
+            <td>76575</td>
+            <td>310945</td>
+            <td>63729</td>
+            <td>84694</td>
         </tr>
-
-        <tr>
-            <td>2</td>
-            <td>0</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">book1</td>
+            <td>768771</td>
+            <td>983146</td>
+            <td>498044</td>
+            <td>500220</td>
+            <td>2411218</td>
+            <td>415556</td>
+            <td>455421</td>
         </tr>
-
-        <tr>
-            <td>3</td>
-            <td>0</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">book2</td>
+            <td>610856</td>
+            <td>780344</td>
+            <td>396846</td>
+            <td>404871</td>
+            <td>1912774</td>
+            <td>327191</td>
+            <td>395796</td>
         </tr>
-
-        <tr>
-            <td>4</td>
-            <td>0</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">geo</td>
+            <td>102400</td>
+            <td>127322</td>
+            <td>92851</td>
+            <td>90115</td>
+            <td>300282</td>
+            <td>164232</td>
+            <td>152588</td>
         </tr>
-
-        <tr>
-            <td>5</td>
-            <td>0</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">news</td>
+            <td>377109</td>
+            <td>466867</td>
+            <td>251512</td>
+            <td>260672</td>
+            <td>1122082</td>
+            <td>232063</td>
+            <td>289901</td>
         </tr>
-
-        <tr>
-            <td>6</td>
-            <td>0</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">obj1</td>
+            <td>21504</td>
+            <td>27379</td>
+            <td>17040</td>
+            <td>19192</td>
+            <td>66546</td>
+            <td>23962</td>
+            <td>33112</td>
         </tr>
-
-        <tr>
-            <td>7</td>
-            <td>0</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">obj2</td>
+            <td>246814</td>
+            <td>322336</td>
+            <td>179249</td>
+            <td>212593</td>
+            <td>812091</td>
+            <td>203702</td>
+            <td>358858</td>
         </tr>
-
-        <tr>
-            <td>8</td>
-            <td>0</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">paper1</td>
+            <td>53161</td>
+            <td>66994</td>
+            <td>34729</td>
+            <td>35926</td>
+            <td>162996</td>
+            <td>29119</td>
+            <td>37180</td>
         </tr>
-
-        <tr>
-            <td>9</td>
-            <td>0</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">paper2</td>
+            <td>82199</td>
+            <td>106376</td>
+            <td>53286</td>
+            <td>53804</td>
+            <td>262680</td>
+            <td>43819</td>
+            <td>50000</td>
         </tr>
-    </table>
-
-
-    <p><strong>Step 2.</strong> Generate a frequency table for the data
-    stream.</p>
-
-    <table style="text-align: center;" border="1" summary="Frequencies">
-        <tr style="font-weight:bold;">
-            <th>Symbol</th>
-            <th>Count</th>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">pic</td>
+            <td>513216</td>
+            <td>392391</td>
+            <td>327985</td>
+            <td>325044</td>
+            <td>494376</td>
+            <td>227137</td>
+            <td>218680</td>
         </tr>
-
-        <tr>
-            <td>0</td>
-            <td>0</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">progc</td>
+            <td>39611</td>
+            <td>46306</td>
+            <td>26174</td>
+            <td>27624</td>
+            <td>106976</td>
+            <td>22658</td>
+            <td>31321</td>
         </tr>
-
-        <tr>
-            <td>1</td>
-            <td>2</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">progl</td>
+            <td>71646</td>
+            <td>83408</td>
+            <td>46170</td>
+            <td>47521</td>
+            <td>193202</td>
+            <td>34977</td>
+            <td>46736</td>
         </tr>
-
-        <tr>
-            <td>2</td>
-            <td>4</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">progp</td>
+            <td>49379</td>
+            <td>57154</td>
+            <td>32098</td>
+            <td>33668</td>
+            <td>130982</td>
+            <td>25144</td>
+            <td>35320</td>
         </tr>
-
-        <tr>
-            <td>3</td>
-            <td>7</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">trans</td>
+            <td>93695</td>
+            <td>105406</td>
+            <td>61614</td>
+            <td>66797</td>
+            <td>237650</td>
+            <td>51727</td>
+            <td>81433</td>
         </tr>
-
-        <tr>
-            <td>4</td>
-            <td>3</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">Total</td>
+            <td>3141622</td>
+            <td>3698119</td>
+            <td>2090869</td>
+            <td>2154622</td>
+            <td>8524800</td>
+            <td>1865016</td>
+            <td>2197750</td>
         </tr>
-
-        <tr>
-            <td>5</td>
-            <td>3</td>
+        <tr style="text-align: right;">
+            <td style="text-align: left;">Percent</td>
+            <td></td>
+            <td>117.71%</td>
+            <td>66.55%</td>
+            <td>68.58%</td>
+            <td>271.35%</td>
+            <td>59.36%</td>
+            <td>69.96%</td>
         </tr>
+    </tbody>
+</table>
 
-        <tr>
-            <td>6</td>
-            <td>3</td>
-        </tr>
+<p>There are three things that you should learn from this table:</p>
+<ol>
+    <li>The Calgary Corpus contains data ill suited for Rice encoding.
+    <li>Frequency substitution may be applied to the Calgary Corpus data to
+    enable Rice encoding to compress the data.
+    <li>Better compression results may be achieved by applying BWT and MFT.
+</ol>
 
-        <tr>
-            <td>7</td>
-            <td>2</td>
-        </tr>
+<p>So why use frequency substitution?  If your goal is to achieve the
+best possible compression ratios, most data sets don't provide a
+compelling reason.  However, the computational and memory resources
+required for frequency substitution is less than that required by BWT
+and MFT.  I didn't provide any proof of that, you'll just have to trust
+me or see for yourself.</p>
 
-        <tr>
-            <td>8</td>
-            <td>3</td>
-        </tr>
+<hr style="width:100%;">
 
-        <tr>
-            <td>9</td>
-            <td>4</td>
-        </tr>
-    </table>
-
-    <p><strong>Step 3.</strong> Sort the symbols by frequency.</p>
-
-    <table style="text-align: center;" border="1" summary="Sorted Frequencies">
-        <tr style="font-weight:bold;">
-            <th>Sorted<br>Position</th>
-            <th>Symbol</th>
-            <th>Count</th>
-        </tr>
-
-        <tr>
-            <td>0</td>
-            <td>3</td>
-            <td>7</td>
-        </tr>
-
-        <tr>
-            <td>1</td>
-            <td>2</td>
-            <td>4</td>
-        </tr>
-
-        <tr>
-            <td>2</td>
-            <td>9</td>
-            <td>4</td>
-        </tr>
-
-        <tr>
-            <td>3</td>
-            <td>4</td>
-            <td>3</td>
-        </tr>
-
-        <tr>
-            <td>4</td>
-            <td>5</td>
-            <td>3</td>
-        </tr>
-
-        <tr>
-            <td>5</td>
-            <td>6</td>
-            <td>3</td>
-        </tr>
-
-        <tr>
-            <td>6</td>
-            <td>8</td>
-            <td>3</td>
-        </tr>
-
-        <tr>
-            <td>7</td>
-            <td>1</td>
-            <td>2</td>
-        </tr>
-
-        <tr>
-            <td>8</td>
-            <td>7</td>
-            <td>2</td>
-        </tr>
-
-        <tr>
-            <td>9</td>
-            <td>0</td>
-            <td>0</td>
-        </tr>
-    </table>
-
-    <p><strong>Step 4.</strong> Write out the encoded data by substituting a
-    symbol for it's position in the frequency table.<br><br>
-
-    3,1,4,1,5,9,2,6,5,3,5,8,9,7,9,3,2,3,8,4,6,2,6,4,3,3,8,3,2,7,9<br>
-    becomes<br>
-    0,7,3,7,4,2,1,5,4,0,4,6,2,8,2,0,1,0,6,3,5,1,5,3,0,0,6,0,1,8,2</p>
-
-    <p>A quick sanity check shows that the sum of the symbols in the
-    initial string (150) is greater than the sum of symbols in the
-    encoded string (96) so we must have lowered the average symbol value.
+<h2>Library Code Interface</h2>
+<div id="api">
+    <h3>Encoding Data</h3>
+    <h4>FreqEncodeFile</h4>
+    <p class="section">Declaration:</p>
+    <p class="indent">
+        <code>int FreqEncodeFile(FILE *inFile, FILE *outFile);</code>
     </p>
 
-    <a name="decoding"></a>
-    <h3>Decoding</h3>
-    <p>Decoding data that has been encoded by frequency substitution is a
-    single pass process.  Given a table of frequency substitutions,
-    reverse the substitutions preformed during the encoding process.</p>
+    <p class="section">Description:</p>
+    <p class="indent">
+        This routine reads an input file and counts character frequencies.
+        The file is then read again and an output file is created where each
+        input character is encoded with a value associated with its
+        frequency.  The more frequent the symbol, the lower the value.
+    </p>
 
-    <p><strong>Example:</strong><br>
-    The following sequence and table of frequency substitutions<br>
-    0,7,3,7,4,2,1,5,4,0,4,6,2,8,2,0,1,0,6,3,5,1,5,3,0,0,6,0,1,8,2</p>
+    <p class="section">Parameters:</p>
+    <p class="indent">
+        <code>inFile</code>
+        - The file stream to be encoded.  It must opened and rewindable.
+        NULL pointers will return an error.<br>
+        <code>outFile</code>
+        - The file stream receiving the encoded results.  It must be opened.
+        NULL pointers will return an error.
+    </p>
 
-    <table style="text-align: center;" border="1" summary="Sorted Frequencies">
-        <tr style="font-weight:bold;">
-            <th>Sorted<br>Position</th>
-            <th>Symbol</th>
-            <th>Count</th>
-        </tr>
+    <p class="section">Effects:</p>
+    <p class="indent">
+        <code>inFile</code> is encoded using the using frequency
+        substitution and written to <code>outFile</code>.  Neither file is
+        closed after exit.
+    </p>
 
-        <tr>
-            <td>0</td>
-            <td>3</td>
-            <td>7</td>
-        </tr>
+    <p class="section">Returned:</p>
+    <p class="indent">
+        0 for success, -1 for failure.  <code>errno</code> will be set in
+        the event of a failure.
+    </p>
 
-        <tr>
-            <td>1</td>
-            <td>2</td>
-            <td>4</td>
-        </tr>
+    <h3>Decoding Data</h3>
+    <h4>FreqDecodeFile</h4>
+    <p class="section">Declaration:</p>
+    <p class="indent">
+        <code>int FreqDecodeFile(FILE *inFile, FILE *outFile);</code>
+    </p>
 
-        <tr>
-            <td>2</td>
-            <td>9</td>
-            <td>4</td>
-        </tr>
+    <p class="section">Description:</p>
+    <p class="indent">
+        This routine reads a frequency substitution encode file and writes a
+        decoded version to the specified output file.
+    </p>
 
-        <tr>
-            <td>3</td>
-            <td>4</td>
-            <td>3</td>
-        </tr>
+    <p class="section">Parameters:</p>
+    <p class="indent">
+        <code>inFile</code>
+        - The file stream to be decoded.  It must opened.  NULL pointers
+        will return an error.<br>
+        <code>outFile</code>
+        - The file stream receiving the decoded results.  It must be opened.
+        NULL pointers will return an error.
+    </p>
 
-        <tr>
-            <td>4</td>
-            <td>5</td>
-            <td>3</td>
-        </tr>
+    <p class="section">Effects:</p>
+    <p class="indent">
+        <code>inFile</code> is decoded using the frequency substitution
+        algorithm and written to <code>outFile</code>.  Neither file is
+        closed after exit.
+    </p>
 
-        <tr>
-            <td>5</td>
-            <td>6</td>
-            <td>3</td>
-        </tr>
+    <p class="section">Returned:</p>
+    <p class="indent">
+        0 for success, -1 for failure.  <code>errno</code> will be set in
+        the event of a failure.
+    </p>
+</div><!-- ends api-->
 
-        <tr>
-            <td>6</td>
-            <td>8</td>
-            <td>3</td>
-        </tr>
+<h3>Portability</h3>
+<p>All the source code that I have provided is written in strict ANSI
+C.  I would expect it to build correctly on any machine with an ANSI C
+compiler.  I have only tested the code compiled with gcc on Linux.</p>
 
-        <tr>
-            <td>7</td>
-            <td>1</td>
-            <td>2</td>
-        </tr>
+<hr style="width:100%;">
 
-        <tr>
-            <td>8</td>
-            <td>7</td>
-            <td>2</td>
-        </tr>
+<h2 ID="download">Actual Software</h2>
+<p>I am releasing my implementations of frequency substitution encoding and
+decoding under the
+<a href="https://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
+The source code repository is available on
+<a href="https://www.github.com">GitHub</a></p>
 
-        <tr>
-            <td>9</td>
-            <td>0</td>
-            <td>0</td>
-        </tr>
-    </table>
+<table class="repotable">
+  <tr>
+    <th>Repository Location</th>
+    <th>
+      <a href="https://github.com/michaeldipperstein/freqsub">
+        https://github.com/michaeldipperstein/freqsub
+      </a>
+    </th>
+  </tr>
+</table>
 
-    <p>Produces the following sequence<br>
-    3,1,4,1,5,9,2,6,5,3,5,8,9,7,9,3,2,3,8,4,6,2,6,4,3,3,8,3,2,7,9</p>
+<hr style="width:100%;">
 
-    <p>If you were paying attention, you're probably wondering how the
-    encoder passed the table of frequency substitutions to the decoder.  The
-    next section provides some ideas and discusses my implementations.</p>
+<p>If you have any further questions or comments, you may contact me by
+e-mail.  My e-mail address is:
+<a href="mailto:mdipperstein@gmail.com">
+mdipperstein@gmail.com</a></p>
 
-    <a name="key"></a>
-    <h3>The Substitution Key</h3>
-    <p>Before the decoder can do anything with the encoded data, it needs
-    a key that tells it how to undo the substitutions.  Since the key is
-    needed immediately, it makes sense for the encoder to output the  key
-    before it outputs the encoded data.</p>
+<a href="index.html">Home</a>
 
-    <p>So what kind of information do we need to have in the key?  In order
-    for the key to be useful, it must contain the original symbol and the
-    value that it was substituted for.</p>
-
-    <p>If there are N possible symbols, the simplest thing to do is write
-    out the complete list of all N (symbol, substitution) pairs.  Such a
-    list contains 2 &times; N entries.  My goal was to use frequency
-    substitution for data compression, so it would be nice if the list
-    could be made even smaller.</p>
-
-    <p>As it turns out there are at least three ways to make the list
-    smaller:</p>
-    <ol>
-    <li>Only transmit keys for symbols that appear in the data.</li>
-    <li>Use the position of the list entries as the symbol value and the
-    value at that position as the substitution representing the symbol.</li>
-    <li>Use the position of the list entries as the substitution value and the
-    value at that position as the symbol that the substitution encodes.</li>
-    </ol>
-
-    <p>I chose to use the position as the code word.</p>
-
-    <a name="position"></a>
-    <h4>Position As Code Word Value</h4>
-    <p>Since the substitution key is the first thing output by the encoder,
-    the key for all N symbols may be output in positions 0 ... (N - 1).
-    Position 0 contains the symbol represented by the substitution 0, position 1
-    contains the symbol represented by substitution 1, and so on  This method
-    requires just N entries for N (substitution, symbol) pairs.</p>
-
-    <h4>Excluding Unused Symbols</h4>
-    <p>Sometimes the data being encoded is sparse; it only uses a fraction
-    of all of the symbols in the symbol set.  In this case there will be
-    a large number of unneeded entries in a <a href="#position">position
-    indexed key</a>.</p>
-
-    <p>For spare data sets, we can omit any symbol that isn't encoded, but
-    to do that, the there has to be a way to indicate to the decoder that
-    there are no more (substitution, symbol) pairs.  I do this by repeating
-    the previous symbol value.</p>
-
-    <p><strong>Example:</strong><br>
-    The substitution key for the <a href="#decoding">decoding</a> example is
-    written as the sequence 3,2,9,4,5,6,8,1,7,7.</p>
-
-    <h3>Effectiveness</h3>
-    <p>If you actually read my introduction, you'd notice that I thought
-    frequency substitution might be helpful when used with
-    <a href="./rice.html">Rice (Golomb) Coding</a>.  In order to
-    test that theory, I used the
-    <a href="https://en.wikipedia.org/wiki/Calgary_corpus">Calgary Corpus</a>
-    as a test data set.</p>
-
-    <p>The table below shows the results of applying frequency substitution
-    to the Calgary Corpus and then using Rice coding (with K = 4 and K = 2) to
-    compress encoded files.  Both position indexed and sparse versions of my
-    frequency substitution implemention were used.  For reference, the
-    table also provides results for Rice coding alone and Rice coding with
-    <a href="./bwt.html">BWT</a> and <a href="./bwt.html#mtf">MTF</a>.</p>
-
-    <p>The results of my test appear in the following tables:</p>
-    <table border=1 summary="Effectiveness">
-        <tbody>
-            <tr valign="bottom" style="text-align: center;">
-                <th rowspan=2 style="width: 12.5%; text-align: left;">File</th>
-                <th rowspan=2 style="width: 12.5%;">Orig</th>
-                <th colspan=3>K = 4</th>
-                <th colspan=3>K = 2</th>
-            </tr>
-            <tr valign="bottom" style="text-align: center;">
-                <th style="width: 12.5%;">Rice</th>
-                <th style="width: 12.5%;">BWT + Rice</th>
-                <th style="width: 12.5%;">FreqSub + Rice</th>
-                <th style="width: 12.5%;">Rice</th>
-                <th style="width: 12.5%;">BWT + Rice</th>
-                <th style="width: 12.5%;">FreqSub + Rice</th>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">bib</td>
-                <td>111261</td>
-                <td>132690</td>
-                <td>73271</td>
-                <td>76575</td>
-                <td>310945</td>
-                <td>63729</td>
-                <td>84694</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">book1</td>
-                <td>768771</td>
-                <td>983146</td>
-                <td>498044</td>
-                <td>500220</td>
-                <td>2411218</td>
-                <td>415556</td>
-                <td>455421</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">book2</td>
-                <td>610856</td>
-                <td>780344</td>
-                <td>396846</td>
-                <td>404871</td>
-                <td>1912774</td>
-                <td>327191</td>
-                <td>395796</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">geo</td>
-                <td>102400</td>
-                <td>127322</td>
-                <td>92851</td>
-                <td>90115</td>
-                <td>300282</td>
-                <td>164232</td>
-                <td>152588</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">news</td>
-                <td>377109</td>
-                <td>466867</td>
-                <td>251512</td>
-                <td>260672</td>
-                <td>1122082</td>
-                <td>232063</td>
-                <td>289901</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">obj1</td>
-                <td>21504</td>
-                <td>27379</td>
-                <td>17040</td>
-                <td>19192</td>
-                <td>66546</td>
-                <td>23962</td>
-                <td>33112</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">obj2</td>
-                <td>246814</td>
-                <td>322336</td>
-                <td>179249</td>
-                <td>212593</td>
-                <td>812091</td>
-                <td>203702</td>
-                <td>358858</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">paper1</td>
-                <td>53161</td>
-                <td>66994</td>
-                <td>34729</td>
-                <td>35926</td>
-                <td>162996</td>
-                <td>29119</td>
-                <td>37180</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">paper2</td>
-                <td>82199</td>
-                <td>106376</td>
-                <td>53286</td>
-                <td>53804</td>
-                <td>262680</td>
-                <td>43819</td>
-                <td>50000</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">pic</td>
-                <td>513216</td>
-                <td>392391</td>
-                <td>327985</td>
-                <td>325044</td>
-                <td>494376</td>
-                <td>227137</td>
-                <td>218680</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">progc</td>
-                <td>39611</td>
-                <td>46306</td>
-                <td>26174</td>
-                <td>27624</td>
-                <td>106976</td>
-                <td>22658</td>
-                <td>31321</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">progl</td>
-                <td>71646</td>
-                <td>83408</td>
-                <td>46170</td>
-                <td>47521</td>
-                <td>193202</td>
-                <td>34977</td>
-                <td>46736</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">progp</td>
-                <td>49379</td>
-                <td>57154</td>
-                <td>32098</td>
-                <td>33668</td>
-                <td>130982</td>
-                <td>25144</td>
-                <td>35320</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">trans</td>
-                <td>93695</td>
-                <td>105406</td>
-                <td>61614</td>
-                <td>66797</td>
-                <td>237650</td>
-                <td>51727</td>
-                <td>81433</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">Total</td>
-                <td>3141622</td>
-                <td>3698119</td>
-                <td>2090869</td>
-                <td>2154622</td>
-                <td>8524800</td>
-                <td>1865016</td>
-                <td>2197750</td>
-            </tr>
-            <tr style="text-align: right;">
-                <td style="text-align: left;">Percent</td>
-                <td></td>
-                <td>117.71%</td>
-                <td>66.55%</td>
-                <td>68.58%</td>
-                <td>271.35%</td>
-                <td>59.36%</td>
-                <td>69.96%</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <p>There are three things that you should learn from this table:</p>
-    <ol>
-        <li>The Calgary Corpus contains data ill suited for Rice encoding.
-        <li>Frequency substitution may be applied to the Calgary Corpus data to
-        enable Rice encoding to compress the data.
-        <li>Better compression results may be achieved by applying BWT and MFT.
-    </ol>
-
-    <p>So why use frequency substitution?  If your goal is to achieve the
-    best possible compression ratios, most data sets don't provide a
-    compelling reason.  However, the computational and memory resources
-    required for frequency substitution is less than that required by BWT
-    and MFT.  I didn't provide any proof of that, you'll just have to trust
-    me or see for yourself.</p>
-
-    <hr style="width:100%;">
-
-    <h2>Library Code Interface</h2>
-    <div id="api">
-        <h3>Encoding Data</h3>
-        <h4>FreqEncodeFile</h4>
-        <p class="section">Declaration:</p>
-        <p class="indent">
-            <code>int FreqEncodeFile(FILE *inFile, FILE *outFile);</code>
-        </p>
-
-        <p class="section">Description:</p>
-        <p class="indent">
-            This routine reads an input file and counts character frequencies.
-            The file is then read again and an output file is created where each
-            input character is encoded with a value associated with its
-            frequency.  The more frequent the symbol, the lower the value.
-        </p>
-
-        <p class="section">Parameters:</p>
-        <p class="indent">
-            <code>inFile</code>
-            - The file stream to be encoded.  It must opened and rewindable.
-            NULL pointers will return an error.<br>
-            <code>outFile</code>
-            - The file stream receiving the encoded results.  It must be opened.
-            NULL pointers will return an error.
-        </p>
-
-        <p class="section">Effects:</p>
-        <p class="indent">
-            <code>inFile</code> is encoded using the using frequency
-            substitution and written to <code>outFile</code>.  Neither file is
-            closed after exit.
-        </p>
-
-        <p class="section">Returned:</p>
-        <p class="indent">
-            0 for success, -1 for failure.  <code>errno</code> will be set in
-            the event of a failure.
-        </p>
-
-        <h3>Decoding Data</h3>
-        <h4>FreqDecodeFile</h4>
-        <p class="section">Declaration:</p>
-        <p class="indent">
-            <code>int FreqDecodeFile(FILE *inFile, FILE *outFile);</code>
-        </p>
-
-        <p class="section">Description:</p>
-        <p class="indent">
-            This routine reads a frequency substitution encode file and writes a
-            decoded version to the specified output file.
-        </p>
-
-        <p class="section">Parameters:</p>
-        <p class="indent">
-            <code>inFile</code>
-            - The file stream to be decoded.  It must opened.  NULL pointers
-            will return an error.<br>
-            <code>outFile</code>
-            - The file stream receiving the decoded results.  It must be opened.
-            NULL pointers will return an error.
-        </p>
-
-        <p class="section">Effects:</p>
-        <p class="indent">
-            <code>inFile</code> is decoded using the frequency substitution
-            algorithm and written to <code>outFile</code>.  Neither file is
-            closed after exit.
-        </p>
-
-        <p class="section">Returned:</p>
-        <p class="indent">
-            0 for success, -1 for failure.  <code>errno</code> will be set in
-            the event of a failure.
-        </p>
-    </div><!-- ends api-->
-
-    <h3>Portability</h3>
-    <p>All the source code that I have provided is written in strict ANSI
-    C.  I would expect it to build correctly on any machine with an ANSI C
-    compiler.  I have only tested the code compiled with gcc on Linux.</p>
-
-    <hr style="width:100%;">
-
-    <a name="download"></a>
-    <h2>Actual Software</h2>
-    <p>I am releasing my implementations of frequency substitution encoding and
-    decoding under the
-    <a href="https://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
-    The source code repository is available on
-    <a href="https://www.github.com">GitHub</a></p>
-
-    <table summary="GitHub Repositories">
-      <tr>
-        <th valign="top" align="left">Repository Location</th>
-        <th valign="top" align="left">
-          <a href="https://github.com/michaeldipperstein/freqsub">
-            https://github.com/michaeldipperstein/freqsub
-          </a>
-        </th>
-      </tr>
-    </table>
-
-    <hr style="width:100%;">
-
-    <p>If you have any further questions or comments, you may contact me by
-    e-mail.  My e-mail address is:
-    <a href="mailto:mdipperstein@gmail.com">
-    mdipperstein@gmail.com</a></p>
-</div><!-- ends main-->
-
-</div><!--container1-->
-</div><!--container2-->
-
-<p><a href="./index.html">Home</a><br>
-Last updated on <em>August 1, 2017</em></p>
+<p>Last updated on <em>December 25, 2018</em></p>
 
 </body>
 </html>
