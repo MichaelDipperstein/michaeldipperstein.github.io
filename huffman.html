@@ -1,619 +1,599 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-"http://www.w3.org/TR/html4/strict.dtd">
-
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <title>Huffman Code Discussion and Implementation</title>
-<meta http-equiv="content-type" content="text/html; charset=utf-8">
-<meta name="generator" content="quanta">
+<meta charset="UTF-8">
+<meta name="author" content="Michael Dipperstein">
 <meta name="keywords" content="huffman canonical encode decode compress source">
-<link rel="stylesheet" href="./twocol.css" type="text/css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="newlook.css" type="text/css">
 </head>
-
 <body>
 
-<div id="container2">
-<div id="container1">
+<div class="navbar">
+    <a href="./index.html">Home</a>
 
-<div id="navbar">
-    <h1>Project Index</h1>
-    <hr style="width:90%;text-align: center;">
-
-    <p><a href="./index.html">Home</a></p>
-
-    <h2>Compression</h2>
-    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
-    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
-    <a href="./delta.html">Delta Coding</a><br>
-    <a href="./freq.html">Frequency Substitution</a><br>
-    <a href="./huffman.html">Huffman Coding</a><br>
-    <a href="./lzss.html">LZSS Coding</a><br>
-    <a href="./lzw.html">LZW Coding</a><br>
-    <a href="./rice.html">Rice (Golomb) Coding</a><br>
-    <a href="./rle.html">Run Length Encoding</a></p>
-
-    <h2>Misc. Programming</h2>
-    <p><a href="./projects.html">School Projects</a><br>
-    <a href="./mltp.html">Thesis Project</a><br>
-    <a href="./crypt.html">crypt(3) Source</a><br>
-    <a href="./hamming.html">Hamming Codes</a><br>
-    <a href="./bitarray.html">Bit Array Libraries</a><br>
-    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
-    <a href="./sqrt.html">Square Root Approximation Library</a><br>
-    <a href="./sort.html">Sort Library</a><br>
-    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
-    <a href="./optlist.html">Command Line Option Parser</a><br>
-    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
-    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
-    <a href="./ezini.html">INI File Parser and Creator</a><br>
-    <a href="./sockets.html">Berkeley Sockets Examples</a></p>
-
-    <hr style="width:90%;text-align: center;">
-
-    <h1>Obligatory Links</h1>
-    <a href="http://counter.li.org/">
-        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
-        width="125" height="72">
-    </a><br>
-
-    <a href="https://validator.w3.org/check?uri=referer">
-        <img src="https://www.w3.org/Icons/valid-html401"
-        alt="Valid HTML 4.01 Strict" height="31" width="88">
-    </a>
-</div><!-- ends navbar-->
-
-<div id="main">
-    <div id="header">
-        <h1>Huffman Code Discussion and Implementation</h1>
-        <h3>by Michael Dipperstein</h3>
+    <div class="dropdown">
+        <button class="dropbutton">Compression</button>
+        <div class="dropdown-items">
+            <a href="./arithmetic.html">Arithmetic Coding</a>
+            <a href="./bwt.html">Burrows-Wheeler Transform</a>
+            <a href="./delta.html">Delta Coding</a>
+            <a href="./freq.html">Frequency Substitution</a>
+            <a href="./huffman.html">Huffman Coding</a>
+            <a href="./lzss.html">LZSS Coding</a>
+            <a href="./lzw.html">LZW Coding</a>
+            <a href="./rice.html">Rice (Golomb) Coding</a>
+            <a href="./rle.html">Run Length Encoding</a>
+        </div>
     </div>
 
-    <hr style="width:100%;">
+    <div class="dropdown">
+        <button class="dropbutton">Misc. Programming</button>
+        <div class="dropdown-items">
+            <a href="./projects.html">School Projects</a>
+            <a href="./mltp.html">Thesis Project</a>
+            <a href="./crypt.html">crypt(3) Source</a>
+            <a href="./hamming.html">Hamming Codes</a>
+            <a href="./bitarray.html">Bit Array Libraries</a>
+            <a href="./bitfile.html">Bit File Stream Libraries</a>
+            <a href="./sqrt.html">Square Root Approximation Library</a>
+            <a href="./sort.html">Sort Library</a>
+            <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a>
+            <a href="./optlist.html">Command Line Option Parser</a>
+            <a href="./stopwatch.html">POSIX Stopwatch Library</a>
+            <a href="./keypress.html">POSIX Wait for Key Press</a>
+            <a href="./ezini.html">INI File Parser and Creator</a>
+            <a href="./sockets.html">Berkeley Sockets Examples</a>
+        </div>
+    </div>
+</div><!-- ends navbar-->
 
-    <p>This is one of those pages documenting an effort that never seems to end.
-    I thought it would end, but I keep coming up with things to try.  This
-    effort grew from a little curiosity.  One day, my copy of
-    <em><a href="http://www.nr.com">&quot;Numerical Recipes In C&quot;
-    </a></em> fell open to the section on Huffman Coding.  The algorithm looked
-    fairly simple, but the source code that followed looked pretty complicated
-    and relied on the vector library used throughout the book.</p>
+<div id="header">
+    <h1>Huffman Code Discussion and Implementation</h1>
+    <h3>by Michael Dipperstein</h3>
+</div>
 
-    <p>The complexity of the source in the book caused me to search the web for
-    clearer source.  Unfortunately, all I found was source further obfuscated by
-    either C++ or Java language structures.  Instead of searching any further,
-    I decided to write my own implementation using what I hope is easy to follow
-    ANSI C.</p>
+<hr style="width:100%;">
 
-    <p>I thought that I could put everything to rest after implementing the
-    basic Huffman algorithm.  I thought wrong.  <a href="http://marknelson.us/">
-    Mark Nelson</a> had mentioned that there are canonical Huffman codes which
-    require less information to be stored in encoded files so that they may be
-    decoded later.  Now I have an easy to follow (I hope) ANSI C implementation
-    of encoding and decoding using canonical Huffman codes.</p>
+<p>This is one of those pages documenting an effort that never seems to end.
+I thought it would end, but I keep coming up with things to try.  This
+effort grew from a little curiosity.  One day, my copy of
+<em><a href="http://www.nr.com">&quot;Numerical Recipes In C&quot;
+</a></em> fell open to the section on Huffman Coding.  The algorithm looked
+fairly simple, but the source code that followed looked pretty complicated
+and relied on the vector library used throughout the book.</p>
 
-    <p>As time passes, I've been tempted to make other enhancements to my
-    implementation, and I've created different versions of code.  Depending on
-    what you're looking for, one version might suit you better than another.</p>
+<p>The complexity of the source in the book caused me to search the web for
+clearer source.  Unfortunately, all I found was source further obfuscated by
+either C++ or Java language structures.  Instead of searching any further,
+I decided to write my own implementation using what I hope is easy to follow
+ANSI C.</p>
 
-    <p>Click <a href="#download">here</a> for information on the different
-    versions of my code, as well as instructions for downloading and building
-    my source code.</p>
+<p>I thought that I could put everything to rest after implementing the
+basic Huffman algorithm.  I thought wrong.  <a href="http://marknelson.us/">
+Mark Nelson</a> had mentioned that there are canonical Huffman codes which
+require less information to be stored in encoded files so that they may be
+decoded later.  Now I have an easy to follow (I hope) ANSI C implementation
+of encoding and decoding using canonical Huffman codes.</p>
 
-    <p>The rest of this page discusses the results of my effort.</p>
+<p>As time passes, I've been tempted to make other enhancements to my
+implementation, and I've created different versions of code.  Depending on
+what you're looking for, one version might suit you better than another.</p>
 
-    <hr style="width:100%;">
+<p>Click <a href="#download">here</a> for information on the different
+versions of my code, as well as instructions for downloading and building
+my source code.</p>
 
-    <h2>Algorithm Overview</h2>
-    <p>Huffman coding is a statistical technique which attempts to reduce the
-    amount of bits required to represent a string of symbols.  The algorithm
-    accomplishes its goals by allowing symbols to vary in length.  Shorter codes
-    are assigned to the most frequently used symbols, and longer codes to the
-    symbols which appear less frequently in the string (that's where the
-    statistical part comes in).  <a href="./arithmetic.html">
-    Arithmetic coding</a> is another statistical coding technique.</p>
+<p>The rest of this page discusses the results of my effort.</p>
 
-    <a name="treegen"></a>
-    <h3>Building a Huffman Tree</h3>
-    <p>The Huffman code for an alphabet (set of symbols) may be generated by
-    constructing a binary tree with nodes containing the symbols to be encoded
-    and their probabilities of occurrence.  This means that you must know all of
-    the symbols that will be encoded and their probabilities prior to
-    constructing a tree.  The tree may be constructed as follows:<br><br>
+<hr style="width:100%;">
 
-    <strong>Step 1.</strong> Create a parentless node for each symbol.  Each
-    node should include the symbol and its probability.<br>
-    <strong>Step 2.</strong> Select the two parentless nodes with the lowest
-    probabilities.<br>
-    <strong>Step 3.</strong> Create a new node which is the parent of the two
-    lowest probability nodes.<br>
-    <strong>Step 4.</strong> Assign the new node a probability equal to the sum
-    of its children's probabilities.<br>
-    <strong>Step 5.</strong> Repeat from Step 2 until there is only one
-    parentless node left.</p>
+<h2>Algorithm Overview</h2>
+<p>Huffman coding is a statistical technique which attempts to reduce the
+amount of bits required to represent a string of symbols.  The algorithm
+accomplishes its goals by allowing symbols to vary in length.  Shorter codes
+are assigned to the most frequently used symbols, and longer codes to the
+symbols which appear less frequently in the string (that's where the
+statistical part comes in).  <a href="./arithmetic.html">
+Arithmetic coding</a> is another statistical coding technique.</p>
 
-    <p>The code for each symbol may be obtained by tracing a path to the symbol
-    from the root of the tree.  A 1 is assigned for a branch in one direction
-    and a 0 is assigned for a branch in the other direction.  For example a
-    symbol which is reached by branching right twice, then left once may be
-    represented by the pattern '110' or '001'.  The figure below depicts a
-    sample tree where 'A' encodes to 0, 'B' encodes to 100, 'C' encodes to 101,
-    'D'  encodes to 110, and 'E' encodes to 111.</p>
+<h3 id="treegen">Building a Huffman Tree</h3>
+<p>The Huffman code for an alphabet (set of symbols) may be generated by
+constructing a binary tree with nodes containing the symbols to be encoded
+and their probabilities of occurrence.  This means that you must know all of
+the symbols that will be encoded and their probabilities prior to
+constructing a tree.  The tree may be constructed as follows:<br><br>
 
-    <a name="sampletree"></a>
-    <pre>
-        ABCDE
-       /     \
-    (0)A     BCDE
-           /      \
-          BC        DE
-        /   \      /   \
-  (100)B  (101)C (110)D (111)E
-    </pre>
+<strong>Step 1.</strong> Create a parentless node for each symbol.  Each
+node should include the symbol and its probability.<br>
+<strong>Step 2.</strong> Select the two parentless nodes with the lowest
+probabilities.<br>
+<strong>Step 3.</strong> Create a new node which is the parent of the two
+lowest probability nodes.<br>
+<strong>Step 4.</strong> Assign the new node a probability equal to the sum
+of its children's probabilities.<br>
+<strong>Step 5.</strong> Repeat from Step 2 until there is only one
+parentless node left.</p>
 
-    <a name="canonicalgen"></a>
-    <p style="margin-bottom: 0%;">
-    Once a Huffman tree is built, Canonical Huffman codes, which require less
-    information to rebuild, may be generated by the following steps:<br><br>
+<p>The code for each symbol may be obtained by tracing a path to the symbol
+from the root of the tree.  A 1 is assigned for a branch in one direction
+and a 0 is assigned for a branch in the other direction.  For example a
+symbol which is reached by branching right twice, then left once may be
+represented by the pattern '110' or '001'.  The figure below depicts a
+sample tree where 'A' encodes to 0, 'B' encodes to 100, 'C' encodes to 101,
+'D'  encodes to 110, and 'E' encodes to 111.</p>
 
-    <strong>Step 1.</strong> Remember the lengths of the codes resulting from a
-    Huffman tree generated per <a href="#treegen">above</a>.<br>
-    <strong>Step 2.</strong> Sort the symbols to be encoded by the lengths of
-    their codes (use symbol value to break ties).<br>
-    <strong>Step 3.</strong> Initialize the current code to all zeros and assign
-    code values to symbols from longest to shortest code as follows:</p>
-    <ol style="list-style-type: upper-alpha; margin-top: 0%;padding-left: 4pc;">
-        <li>If the current code length is greater than the length of the code
-        for the current symbol, right shift off the extra bits.
-        <li>Assign the code to the current symbol.
-        <li>Increment the code value.
-        <li>Get the symbol with the next longest code.
-        <li>Repeat from A until all symbols are assigned codes.
-    </ol>
+<pre id="sampletree">
+    ABCDE
+   /     \
+(0)A     BCDE
+       /      \
+      BC        DE
+    /   \      /   \
+(100)B  (101)C (110)D (111)E
+</pre>
 
-    <p>The tree <a href="#sampletree">above</a> will generate the following
-    canonical code:</p>
+<p id="canonicalgen" style="margin-bottom: 0%;">
+Once a Huffman tree is built, Canonical Huffman codes, which require less
+information to rebuild, may be generated by the following steps:<br><br>
 
-    <table border="1" summary="Canonical Codes">
+<strong>Step 1.</strong> Remember the lengths of the codes resulting from a
+Huffman tree generated per <a href="#treegen">above</a>.<br>
+<strong>Step 2.</strong> Sort the symbols to be encoded by the lengths of
+their codes (use symbol value to break ties).<br>
+<strong>Step 3.</strong> Initialize the current code to all zeros and assign
+code values to symbols from longest to shortest code as follows:</p>
+<ol style="list-style-type: upper-alpha; margin-top: 0%;padding-left: 4pc;">
+    <li>If the current code length is greater than the length of the code
+    for the current symbol, right shift off the extra bits.
+    <li>Assign the code to the current symbol.
+    <li>Increment the code value.
+    <li>Get the symbol with the next longest code.
+    <li>Repeat from A until all symbols are assigned codes.
+</ol>
+
+<p>The tree <a href="#sampletree">above</a> will generate the following
+canonical code:</p>
+
+<table class="double-boarder-table">
+    <caption>
+        TABLE 1.  Table of Canonical Codes
+    </caption>
+    <tbody style="text-align: center">
         <tr>
             <th>Symbol</th>
             <th>Code Length</th>
             <th>Code</th>
         </tr>
 
-        <tr align="center">
+        <tr>
             <td>E</td>
             <td>3</td>
             <td>000</td>
         </tr>
 
-        <tr align="center">
+        <tr>
             <td>D</td>
             <td>3</td>
             <td>001</td>
         </tr>
 
-        <tr align="center">
+        <tr>
             <td>C</td>
             <td>3</td>
             <td>010</td>
         </tr>
 
-        <tr align="center">
+        <tr>
             <td>B</td>
             <td>3</td>
             <td>011</td>
         </tr>
 
-        <tr align="center">
+        <tr>
             <td>A</td>
             <td>1</td>
             <td>1</td>
         </tr>
-    </table>
+    </tbody>
+</table>
 
-    <h3>Encoding Data</h3>
-    <p>Once a Huffman code has been generated, data may be encoded simply by
-    replacing each symbol with it's code.</p>
+<h3>Encoding Data</h3>
+<p>Once a Huffman code has been generated, data may be encoded simply by
+replacing each symbol with it's code.</p>
 
-    <h3>Decoding Data</h3>
-    <p>If you know the Huffman code for some encoded data, decoding may be
-    accomplished by reading the encoded data one bit at a time.  Once the bits
-    read match a code for symbol, write out the symbol and start collecting bits
-    again.  See <a href="#decode">Decoding Encode Files</a> for details.</p>
+<h3>Decoding Data</h3>
+<p>If you know the Huffman code for some encoded data, decoding may be
+accomplished by reading the encoded data one bit at a time.  Once the bits
+read match a code for symbol, write out the symbol and start collecting bits
+again.  See <a href="#decode">Decoding Encode Files</a> for details.</p>
 
-    <h2>References</h2>
-    <p>A copy of the section from
-    <em><a href="http://www.nr.com">&quot;Numerical Recipes In C&quot;</a></em>
-    which started this whole effort may be found at
-    <a href="https://lib-www.lanl.gov/numerical/bookcpdf/c20-4.pdf">
-    https://lib-www.lanl.gov/numerical/bookcpdf/c20-4.pdf</a>.</p>
+<h2>References</h2>
+<p>A copy of the section from
+<em><a href="http://www.nr.com">&quot;Numerical Recipes In C&quot;</a></em>
+which started this whole effort may be found at
+<a href="https://lib-www.lanl.gov/numerical/bookcpdf/c20-4.pdf">
+https://lib-www.lanl.gov/numerical/bookcpdf/c20-4.pdf</a>.</p>
 
-    <p>A copy of one David Huffman's original publications about his algorithm
-    may be found at
-    <a href="https://www.ic.tu-berlin.de/fileadmin/fg121/Source-Coding_WS12/selected-readings/10_04051119.pdf">
-    https://www.ic.tu-berlin.de/fileadmin/fg121/Source-Coding_WS12/selected-readings/10_04051119.pdf
-    </a>.</p>
+<p>A copy of one David Huffman's original publications about his algorithm
+may be found at
+<a href="https://www.ic.tu-berlin.de/fileadmin/fg121/Source-Coding_WS12/selected-readings/10_04051119.pdf">
+https://www.ic.tu-berlin.de/fileadmin/fg121/Source-Coding_WS12/selected-readings/10_04051119.pdf
+</a>.</p>
 
-    <p>A discussion on Huffman codes including canonical Huffman codes may be
-    found at <a href="http://www.compressconsult.com/huffman/">
-    http://www.compressconsult.com/huffman/</a>.</p>
+<p>A discussion on Huffman codes including canonical Huffman codes may be
+found at <a href="http://www.compressconsult.com/huffman/">
+http://www.compressconsult.com/huffman/</a>.</p>
 
-    <hr style="width:100%;">
+<hr style="width:100%;">
 
-    <h2>Implementation Issues</h2>
-    <h3>What is a Symbol</h3>
-    <p>One of the first questions that needs to be resolved before you start is
-    &quot;What is a symbol?&quot;.  For my implementation a symbol is any 8-bit
-    combination as well as an End Of File (EOF) marker.  This means that there
-    are 257 possible symbols in any code.</p>
+<h2>Implementation Issues</h2>
+<h3>What is a Symbol</h3>
+<p>One of the first questions that needs to be resolved before you start is
+&quot;What is a symbol?&quot;.  For my implementation a symbol is any 8-bit
+combination as well as an End Of File (EOF) marker.  This means that there
+are 257 possible symbols in any code.</p>
 
-    <h3>Handling End-of-File (EOF)</h3>
-    <p>The EOF is of particular importance, because it is likely that an encoded
-    file will not have a number of bits that is a integral multiple of 8.  Most
-    file systems require that files be stored in bytes, so it's likely that
-    encoded files will have spare bits.  If you don't know where the EOF is, the
-    spare bits may be decoded as an extra symbol.</p>
+<h3>Handling End-of-File (EOF)</h3>
+<p>The EOF is of particular importance, because it is likely that an encoded
+file will not have a number of bits that is a integral multiple of 8.  Most
+file systems require that files be stored in bytes, so it's likely that
+encoded files will have spare bits.  If you don't know where the EOF is, the
+spare bits may be decoded as an extra symbol.</p>
 
-    <p>At the time I sat down to implement Huffman's algorithm, there were two
-    ways that I could think of for handling the EOF.  It could either be encoded
-    as a symbol, or ignored.  Ignoring the EOF requires that a count of the
-    number of symbols encoded be maintained so that decoding can stop after all
-    real symbols have been decoded and any spare bits can be ignored.</p>
+<p>At the time I sat down to implement Huffman's algorithm, there were two
+ways that I could think of for handling the EOF.  It could either be encoded
+as a symbol, or ignored.  Ignoring the EOF requires that a count of the
+number of symbols encoded be maintained so that decoding can stop after all
+real symbols have been decoded and any spare bits can be ignored.</p>
 
-    <p>Later I learned about the &quot;bijective&quot; method for handling the
-    EOF.  For information on the &quot;bijective&quot; method refer to
-    <a href="http://bijective.dogma.net/">SCOTT's &quot;one to one&quot;
-    compression discussion</a>.</p>
+<p>Later I learned about the &quot;bijective&quot; method for handling the
+EOF.  For information on the &quot;bijective&quot; method refer to
+<a href="http://bijective.dogma.net/">SCOTT's &quot;one to one&quot;
+compression discussion</a>.</p>
 
-    <p>Encoding the EOF has the advantage of not requiring a count of the number
-    of symbols encoded in a file.  When I originally started out I thought that
-    a 257<sup>th</sup> symbol would allow for the possibility of a 17 bit
-    code.  And I didn't want to have to deal with 17 bit values in C.  As it
-    turns out a 257<sup>th</sup> symbol will create the possibility of a
-    256 bit code and I ended up writing a library that could handle 256 bit
-    codes anyway.  (See <a href="#codelen">Code Generation</a>.)</p>
+<p>Encoding the EOF has the advantage of not requiring a count of the number
+of symbols encoded in a file.  When I originally started out I thought that
+a 257<sup>th</sup> symbol would allow for the possibility of a 17 bit
+code.  And I didn't want to have to deal with 17 bit values in C.  As it
+turns out a 257<sup>th</sup> symbol will create the possibility of a
+256 bit code and I ended up writing a library that could handle 256 bit
+codes anyway.  (See <a href="#codelen">Code Generation</a>.)</p>
 
-    <p>Consequently, I have two different implementations, a 0.1 version that
-    contains a count of the number of symbols to be decoded, and a versions 0.2
-    and later that encode the EOF.</p>
+<p>Consequently, I have two different implementations, a 0.1 version that
+contains a count of the number of symbols to be decoded, and a versions 0.2
+and later that encode the EOF.</p>
 
-    <a name="codegen"></a>
-    <h3>Code Generation</h3>
-    <p>The source code that I have provided generates a unique Huffman tree
-    based on the number of occurrences of symbols within the file to be encoded.
-    The result is a Huffman code that yields an optimal compression ratio for
-    the file to be encoded.  The algorithm to generate a Huffman tree and the
-    extra steps required to build a canonical Huffman code are outlined
-    <a href="#treegen">above</a>.</p>
+<h3 id="codegen">Code Generation</h3>
+<p>The source code that I have provided generates a unique Huffman tree
+based on the number of occurrences of symbols within the file to be encoded.
+The result is a Huffman code that yields an optimal compression ratio for
+the file to be encoded.  The algorithm to generate a Huffman tree and the
+extra steps required to build a canonical Huffman code are outlined
+<a href="#treegen">above</a>.</p>
 
-    <p>Using character counts to generate a tree means that a character may not
-    occur more often than it can be counted.  The counters used in my
-    implementation are of the type <code>unsigned int</code>, therefore a
-    character may not occur more than <code>UINT_MAX</code> times.  My
-    implementation checks for this and issues an error.  If larger counts are
-    required, the program may be modified to use a larger type or other
-    arbitrary sized counters.</p>
+<p>Using character counts to generate a tree means that a character may not
+occur more often than it can be counted.  The counters used in my
+implementation are of the type <code>unsigned int</code>, therefore a
+character may not occur more than <code>UINT_MAX</code> times.  My
+implementation checks for this and issues an error.  If larger counts are
+required, the program may be modified to use a larger type or other
+arbitrary sized counters.</p>
 
-    <a name="codelen"></a>
-    <h4>Code Length</h4>
-    <p>In general, a Huffman code for an N symbol alphabet, may yield symbols
-    with a maximum code length of N - 1 bits.  Following the rules outlined
-    <a href="#treegen">above</a>, it can be shown that if at every step that
-    combines the two parentless nodes with the lowest probability, only
-    one of the combined nodes already has children, an N symbol alphabet (for
-    even N) will have two N - 1 length codes.</p>
+<h4 id="codelen">Code Length</h4>
+<p>In general, a Huffman code for an N symbol alphabet, may yield symbols
+with a maximum code length of N - 1 bits.  Following the rules outlined
+<a href="#treegen">above</a>, it can be shown that if at every step that
+combines the two parentless nodes with the lowest probability, only
+one of the combined nodes already has children, an N symbol alphabet (for
+even N) will have two N - 1 length codes.</p>
 
-    <p><strong>Example</strong>
-    Given a 6 symbol alphabet with the following symbol probabilities: A = 1,
-    B = 2, C = 4, D = 8, E = 16, F = 32<br><br>
+<p><strong>Example</strong>
+Given a 6 symbol alphabet with the following symbol probabilities: A = 1,
+B = 2, C = 4, D = 8, E = 16, F = 32<br><br>
 
-    <strong>Step 1.</strong> Combine A and B into AB with a probability of 3.<br>
-    <strong>Step 2.</strong> Combine AB and C into ABC with a probability of 7.<br>
-    <strong>Step 3.</strong> Combine ABC and D into ABCD with a probability of 15.<br>
-    <strong>Step 4.</strong> Combine ABCD and E into ABCDE with a probability of 31.<br>
-    <strong>Step 5.</strong> Combine ABCDE and F into ABCDEF with a probability of 63.</p>
+<strong>Step 1.</strong> Combine A and B into AB with a probability of 3.<br>
+<strong>Step 2.</strong> Combine AB and C into ABC with a probability of 7.<br>
+<strong>Step 3.</strong> Combine ABC and D into ABCD with a probability of 15.<br>
+<strong>Step 4.</strong> Combine ABCD and E into ABCDE with a probability of 31.<br>
+<strong>Step 5.</strong> Combine ABCDE and F into ABCDEF with a probability of 63.</p>
 
-    <p>The Following tree results:</p>
-    <pre>
-          ABCDEF
-         /      \
-      (0)F      ABCDE
-              /     \
-          (10)E     ABCD
-                  /    \
-            (110)D     ABC
-                      /   \
-                (1110)C    AB
-                          /  \
-                  (11110)A    (11111)B
-    </pre>
+<p>The Following tree results:</p>
+<pre>
+      ABCDEF
+     /      \
+  (0)F      ABCDE
+          /     \
+      (10)E     ABCD
+              /    \
+        (110)D     ABC
+                  /   \
+            (1110)C    AB
+                      /  \
+              (11110)A    (11111)B
+</pre>
 
-    <p>In order to handle a 256 character alphabet, which may require code
-    lengths of up to 255 bits, I created a library that performs standard bit
-    operations on arrays unsigned characters.  Versions prior to 0.3 use a
-    library designed specifically for 256 bit arrays.  Later versions use a
-    <a href="./bitarray.html">bitarry library</a> designed for arbitrary
-    length arrays.  Both versions of he library are written in the same portable
-    ANSI C as the rest of my Huffman code library.</p>
+<p>In order to handle a 256 character alphabet, which may require code
+lengths of up to 255 bits, I created a library that performs standard bit
+operations on arrays unsigned characters.  Versions prior to 0.3 use a
+library designed specifically for 256 bit arrays.  Later versions use a
+<a href="./bitarray.html">bitarry library</a> designed for arbitrary
+length arrays.  Both versions of he library are written in the same portable
+ANSI C as the rest of my Huffman code library.</p>
 
-    <h3>Writing Encoded Files</h3>
-    <p>I chose to write my encoded files in two parts.  The first part contains
-    information used to reconstruct the Huffman code (a header) and the second
-    part contains the encoded data.</p>
+<h3>Writing Encoded Files</h3>
+<p>I chose to write my encoded files in two parts.  The first part contains
+information used to reconstruct the Huffman code (a header) and the second
+part contains the encoded data.</p>
 
-    <h4>Header</h4>
-    <p>In order to decode files, the decoding algorithm must know what code was
-    used to encode the data.  Being unable to come up with a clean way to store
-    the tree itself, I chose to store information about the encoded symbols.</p>
+<h4>Header</h4>
+<p>In order to decode files, the decoding algorithm must know what code was
+used to encode the data.  Being unable to come up with a clean way to store
+the tree itself, I chose to store information about the encoded symbols.</p>
 
-    <p>To reconstruct a traditional Huffman code, I chose to store a list of
-    all the symbols and their counts.  By using the symbol counts and the same
-    <a href="#treegen">tree generation</a> algorithm that the encoding algorithm
-    uses, a tree that matching the encoding tree may be constructed.</p>
+<p>To reconstruct a traditional Huffman code, I chose to store a list of
+all the symbols and their counts.  By using the symbol counts and the same
+<a href="#treegen">tree generation</a> algorithm that the encoding algorithm
+uses, a tree that matching the encoding tree may be constructed.</p>
 
-    <p>To save some space, I only stored the non-zero symbol counts, and the end
-    of count data is indicated by an entry for a character zero with a count of
-    zero.  The EOF count is not stored in my implementations that encode the
-    EOF, both the encoder and decoder assume that there is only one EOF.</p>
+<p>To save some space, I only stored the non-zero symbol counts, and the end
+of count data is indicated by an entry for a character zero with a count of
+zero.  The EOF count is not stored in my implementations that encode the
+EOF, both the encoder and decoder assume that there is only one EOF.</p>
 
-    <p>Canonical Huffman codes usually take less information to reconstruct than
-    traditional Huffman codes.  To reconstruct a canonical Huffman code, you
-    only need to know the length of the code for each symbol and the
-    <a href="#canonicalgen">rules used to generate the code</a>.  The header
-    generated by my canonical Huffman algorithm consists of the code length for
-    each symbol.  If the EOF is not encoded the total number of encoded symbols
-    is also included in the header.</p>
+<p>Canonical Huffman codes usually take less information to reconstruct than
+traditional Huffman codes.  To reconstruct a canonical Huffman code, you
+only need to know the length of the code for each symbol and the
+<a href="#canonicalgen">rules used to generate the code</a>.  The header
+generated by my canonical Huffman algorithm consists of the code length for
+each symbol.  If the EOF is not encoded the total number of encoded symbols
+is also included in the header.</p>
 
-    <h4>Encoded Data</h4>
-    <p>The encoding of the original data immediately follows the header.  One
-    natural by-product of canonical Huffman code is a table containing symbols
-    and their codes.  This table allows for fast lookup of codes.  If symbol
-    codes are stored in tree form, the tree must be searched for each symbol to
-    be encoded.  Instead of searching the leaves of the Huffman tree each time a
-    symbol is to be encoded, my traditional Huffman implementation builds a
-    table of codes for each symbol.  The table is built by performing a depth
-    first traversal of the Huffman tree and storing the codes for the leaves as
-    they are reached.</p>
+<h4>Encoded Data</h4>
+<p>The encoding of the original data immediately follows the header.  One
+natural by-product of canonical Huffman code is a table containing symbols
+and their codes.  This table allows for fast lookup of codes.  If symbol
+codes are stored in tree form, the tree must be searched for each symbol to
+be encoded.  Instead of searching the leaves of the Huffman tree each time a
+symbol is to be encoded, my traditional Huffman implementation builds a
+table of codes for each symbol.  The table is built by performing a depth
+first traversal of the Huffman tree and storing the codes for the leaves as
+they are reached.</p>
 
-    <p>With a table of codes, writing encoded data is simple.  Read a symbol to
-    be encoded, and write the code for that symbol.  Since symbols may not be
-    integral bytes in length, care needs to be taken when writing each symbol.
-    Bits need to be aggregated into bytes.  In my 0.1 version of code, all the
-    aggregation is done in-line.  My versions 0.2 and later use my
-    <a href="./bitfile.html">bitfile library</a> to handle writing any
-    number of bits to a file.</p>
+<p>With a table of codes, writing encoded data is simple.  Read a symbol to
+be encoded, and write the code for that symbol.  Since symbols may not be
+integral bytes in length, care needs to be taken when writing each symbol.
+Bits need to be aggregated into bytes.  In my 0.1 version of code, all the
+aggregation is done in-line.  My versions 0.2 and later use my
+<a href="./bitfile.html">bitfile library</a> to handle writing any
+number of bits to a file.</p>
 
-    <a name="decode"></a>
-    <h3>Decoding Encode Files</h3>
-    <p>Like encoding a file, decoding a file is a two step process.  First the
-    header data is read in, and the Huffman code for each symbol is
-    reconstructed.  Then the encoded data is read and decoded.</p>
+<h3 id="decode">Decoding Encode Files</h3>
+<p>Like encoding a file, decoding a file is a two step process.  First the
+header data is read in, and the Huffman code for each symbol is
+reconstructed.  Then the encoded data is read and decoded.</p>
 
-    <p>I have read that the fastest method for decoding symbols is to read the
-    encoded file one bit at time and traverse the Huffman tree until a leaf
-    containing a symbol is reached.  However, I have also read that it is faster
-    to store the codes for each symbol in an array sorted by code length and
-    search for a match every time a bit is read in.  I have yet to see a proof
-    for either side.</p>
+<p>I have read that the fastest method for decoding symbols is to read the
+encoded file one bit at time and traverse the Huffman tree until a leaf
+containing a symbol is reached.  However, I have also read that it is faster
+to store the codes for each symbol in an array sorted by code length and
+search for a match every time a bit is read in.  I have yet to see a proof
+for either side.</p>
 
-    <p>I do know that the tree method is faster for the worst case encoding
-    where all symbols are 8 bits long.  In this case the 8-bit code will lead to
-    a symbol 8 levels down the tree, but a binary search on 256 symbols is
-    O(log<sub>2</sub>(256)) or an average of 16 steps.</p>
+<p>I do know that the tree method is faster for the worst case encoding
+where all symbols are 8 bits long.  In this case the 8-bit code will lead to
+a symbol 8 levels down the tree, but a binary search on 256 symbols is
+O(log<sub>2</sub>(256)) or an average of 16 steps.</p>
 
-    <p>Since conventional Huffman encoding naturally leads to the construction
-    of a tree for decoding, I chose the tree method here.  The encoded file is
-    read one bit at a time, and the tree is traversed according to each of the
-    bits.  When a bit causes a leaf of the tree to be reached, the symbol
-    contained in that leaf is written to the decoded file, and traversal starts
-    again from the root of the tree.</p>
+<p>Since conventional Huffman encoding naturally leads to the construction
+of a tree for decoding, I chose the tree method here.  The encoded file is
+read one bit at a time, and the tree is traversed according to each of the
+bits.  When a bit causes a leaf of the tree to be reached, the symbol
+contained in that leaf is written to the decoded file, and traversal starts
+again from the root of the tree.</p>
 
-    <p>Canonical Huffman encoding naturally leads to the construction of an
-    array of symbols sorted by the size of their code.  Consequently, I chose
-    the array method for decoding files encoded with a canonical Huffman code.
-    The encoded file is read one bit at time, with each bit accumulating in a
-    string of undecoded bits.  Then all the codes of a length matching the
-    string length are compared to the string.  If a match is found, the string
-    is decoded as the matching symbol and the bit string is cleared.  The
-    process repeats itself until all symbols have been decoded.</p>
+<p>Canonical Huffman encoding naturally leads to the construction of an
+array of symbols sorted by the size of their code.  Consequently, I chose
+the array method for decoding files encoded with a canonical Huffman code.
+The encoded file is read one bit at time, with each bit accumulating in a
+string of undecoded bits.  Then all the codes of a length matching the
+string length are compared to the string.  If a match is found, the string
+is decoded as the matching symbol and the bit string is cleared.  The
+process repeats itself until all symbols have been decoded.</p>
 
-    <hr style="width:100%;">
+<hr style="width:100%;">
 
-    <h2>Library Code Interface</h2>
-    <div id="api">
-        <h3>Encoding Data (Traditional codes)</h3>
-        <h4>HuffmanEncodeFile</h4>
-        <p class="section">Declaration:</p>
-        <p class="indent">
-            <code>int HuffmanEncodeFile(FILE *inFile, FILE *outFile);</code>
-        </p>
+<h2>Library Code Interface</h2>
+<div id="api">
+    <h3>Encoding Data (Traditional codes)</h3>
+    <h4>HuffmanEncodeFile</h4>
+    <p class="section">Declaration:</p>
+    <p class="indent">
+        <code>int HuffmanEncodeFile(FILE *inFile, FILE *outFile);</code>
+    </p>
 
-        <p class="section">Description:</p>
-        <p class="indent">
-            This routine genrates a Huffman tree optimized for a file and writes
-            out an version that file encoded by the tree.
-        </p>
+    <p class="section">Description:</p>
+    <p class="indent">
+        This routine genrates a Huffman tree optimized for a file and writes
+        out an version that file encoded by the tree.
+    </p>
 
-        <p class="section">Parameters:</p>
-        <p class="indent">
-            <code>inFile</code>
-            - The file stream to be encoded.  It must opened and rewindable.
-            NULL pointers will return an error.<br>
-            <code>outFile</code>
-            - The file stream receiving the encoded results.  It must be opened.
-            NULL pointers will return an error.
-        </p>
+    <p class="section">Parameters:</p>
+    <p class="indent">
+        <code>inFile</code>
+        - The file stream to be encoded.  It must opened and rewindable.
+        NULL pointers will return an error.<br>
+        <code>outFile</code>
+        - The file stream receiving the encoded results.  It must be opened.
+        NULL pointers will return an error.
+    </p>
 
-        <p class="section">Effects:</p>
-        <p class="indent">
-            <code>inFile</code> is encoded using a Huffman code and
-            written to <code>outFile</code>.  Neither file is closed after exit.
-        </p>
+    <p class="section">Effects:</p>
+    <p class="indent">
+        <code>inFile</code> is encoded using a Huffman code and
+        written to <code>outFile</code>.  Neither file is closed after exit.
+    </p>
 
-        <p class="section">Returned:</p>
-        <p class="indent">
-            0 for success, -1 for failure.  <code>errno</code> will be set in
-            the event of a failure.
-        </p>
+    <p class="section">Returned:</p>
+    <p class="indent">
+        0 for success, -1 for failure.  <code>errno</code> will be set in
+        the event of a failure.
+    </p>
 
-        <h3>Encoding Data (Canonical codes)</h3>
-        <h4>CanonicalEncodeFile</h4>
-        <p class="section">Declaration:</p>
-        <p class="indent">
-            <code>int CanonicalEncodeFile(FILE *inFile, FILE *outFile);</code>
-        </p>
+    <h3>Encoding Data (Canonical codes)</h3>
+    <h4>CanonicalEncodeFile</h4>
+    <p class="section">Declaration:</p>
+    <p class="indent">
+        <code>int CanonicalEncodeFile(FILE *inFile, FILE *outFile);</code>
+    </p>
 
-        <p class="section">Description:</p>
-        <p class="indent">
-            This routine genrates a Canonical Huffman tree optimized for a file
-            and writes out an version that file encoded by the tree.
-        </p>
+    <p class="section">Description:</p>
+    <p class="indent">
+        This routine genrates a Canonical Huffman tree optimized for a file
+        and writes out an version that file encoded by the tree.
+    </p>
 
-        <p class="section">Parameters:</p>
-        <p class="indent">
-            <code>inFile</code>
-            - The file stream to be encoded.  It must opened and rewindable.
-            NULL pointers will return an error.<br>
-            <code>outFile</code>
-            - The file stream receiving the encoded results.  It must be opened.
-            NULL pointers will return an error.
-        </p>
+    <p class="section">Parameters:</p>
+    <p class="indent">
+        <code>inFile</code>
+        - The file stream to be encoded.  It must opened and rewindable.
+        NULL pointers will return an error.<br>
+        <code>outFile</code>
+        - The file stream receiving the encoded results.  It must be opened.
+        NULL pointers will return an error.
+    </p>
 
-        <p class="section">Effects:</p>
-        <p class="indent">
-            <code>inFile</code> is encoded using a Canonical Huffman code and
-            written to <code>outFile</code>.  Neither file is closed after exit.
-        </p>
+    <p class="section">Effects:</p>
+    <p class="indent">
+        <code>inFile</code> is encoded using a Canonical Huffman code and
+        written to <code>outFile</code>.  Neither file is closed after exit.
+    </p>
 
-        <p class="section">Returned:</p>
-        <p class="indent">
-            0 for success, -1 for failure.  <code>errno</code> will be set in
-            the event of a failure.
-        </p>
+    <p class="section">Returned:</p>
+    <p class="indent">
+        0 for success, -1 for failure.  <code>errno</code> will be set in
+        the event of a failure.
+    </p>
 
-        <h3>Decoding Data  (Traditional codes)</h3>
-        <h4>HuffmanDecodeFile</h4>
-        <p class="section">Declaration:</p>
-        <p class="indent">
-            <code>int HuffmanDecodeFile(FILE *inFile, FILE *outFile);</code>
-        </p>
+    <h3>Decoding Data  (Traditional codes)</h3>
+    <h4>HuffmanDecodeFile</h4>
+    <p class="section">Declaration:</p>
+    <p class="indent">
+        <code>int HuffmanDecodeFile(FILE *inFile, FILE *outFile);</code>
+    </p>
 
-        <p class="section">Description:</p>
-        <p class="indent">
-            This routine reads a file encoded by the Huffman coding algorithm
-            and writes out a decoded version of that file.
-        </p>
+    <p class="section">Description:</p>
+    <p class="indent">
+        This routine reads a file encoded by the Huffman coding algorithm
+        and writes out a decoded version of that file.
+    </p>
 
-        <p class="section">Parameters:</p>
-        <p class="indent">
-            <code>inFile</code>
-            - The file stream to be decoded.  It must opened.  NULL pointers
-            will return an error.<br>
-            <code>outFile</code>
-            - The file stream receiving the decoded results.  It must be opened.
-            NULL pointers will return an error.
-        </p>
+    <p class="section">Parameters:</p>
+    <p class="indent">
+        <code>inFile</code>
+        - The file stream to be decoded.  It must opened.  NULL pointers
+        will return an error.<br>
+        <code>outFile</code>
+        - The file stream receiving the decoded results.  It must be opened.
+        NULL pointers will return an error.
+    </p>
 
-        <p class="section">Effects:</p>
-        <p class="indent">
-            <code>inFile</code> is decoded using a traditional Huffman
-            algorithm and written to <code>outFile</code>.  Neither file is
-            closed after exit.
-        </p>
+    <p class="section">Effects:</p>
+    <p class="indent">
+        <code>inFile</code> is decoded using a traditional Huffman
+        algorithm and written to <code>outFile</code>.  Neither file is
+        closed after exit.
+    </p>
 
-        <p class="section">Returned:</p>
-        <p class="indent">
-            0 for success, -1 for failure.  <code>errno</code> will be set in
-            the event of a failure.
-        </p>
+    <p class="section">Returned:</p>
+    <p class="indent">
+        0 for success, -1 for failure.  <code>errno</code> will be set in
+        the event of a failure.
+    </p>
 
-        <h3>Decoding Data  (Canonical codes)</h3>
-        <h4>CanonicalDecodeFile</h4>
-        <p class="section">Declaration:</p>
-        <p class="indent">
-            <code>int CanonicalDecodeFile(FILE *inFile, FILE *outFile);</code>
-        </p>
+    <h3>Decoding Data  (Canonical codes)</h3>
+    <h4>CanonicalDecodeFile</h4>
+    <p class="section">Declaration:</p>
+    <p class="indent">
+        <code>int CanonicalDecodeFile(FILE *inFile, FILE *outFile);</code>
+    </p>
 
-        <p class="section">Description:</p>
-        <p class="indent">
-            This routine reads a file encoded by the canonical Huffman coding
-            algorithm and writes out a decoded version of that file.
-        </p>
+    <p class="section">Description:</p>
+    <p class="indent">
+        This routine reads a file encoded by the canonical Huffman coding
+        algorithm and writes out a decoded version of that file.
+    </p>
 
-        <p class="section">Parameters:</p>
-        <p class="indent">
-            <code>inFile</code>
-            - The file stream to be decoded.  It must opened.  NULL pointers
-            will return an error.<br>
-            <code>outFile</code>
-            - The file stream receiving the decoded results.  It must be opened.
-            NULL pointers will return an error.
-        </p>
+    <p class="section">Parameters:</p>
+    <p class="indent">
+        <code>inFile</code>
+        - The file stream to be decoded.  It must opened.  NULL pointers
+        will return an error.<br>
+        <code>outFile</code>
+        - The file stream receiving the decoded results.  It must be opened.
+        NULL pointers will return an error.
+    </p>
 
-        <p class="section">Effects:</p>
-        <p class="indent">
-            <code>inFile</code> is decoded using a canonical Huffman
-            algorithm and written to <code>outFile</code>.  Neither file is
-            closed after exit.
-        </p>
+    <p class="section">Effects:</p>
+    <p class="indent">
+        <code>inFile</code> is decoded using a canonical Huffman
+        algorithm and written to <code>outFile</code>.  Neither file is
+        closed after exit.
+    </p>
 
-        <p class="section">Returned:</p>
-        <p class="indent">
-            0 for success, -1 for failure.  <code>errno</code> will be set in
-            the event of a failure.
-        </p>
-    </div><!-- ends api-->
+    <p class="section">Returned:</p>
+    <p class="indent">
+        0 for success, -1 for failure.  <code>errno</code> will be set in
+        the event of a failure.
+    </p>
+</div><!-- ends api-->
 
-    <h2>Portability Issues</h2>
-    <p>All the source code that I have provided is written in strict ANSI-C.  I
-    would expect it to build correctly on any machine with an ANSI-C compiler.
-    However, I have only tested the code on my 64-bit Linux PC using the gcc
-    compiler.</p>
+<h2>Portability Issues</h2>
+<p>All the source code that I have provided is written in strict ANSI-C.  I
+would expect it to build correctly on any machine with an ANSI-C compiler.
+However, I have only tested the code on my 64-bit Linux PC using the gcc
+compiler.</p>
 
-    <p>The code makes no assumptions about the size of types or byte order
-    (endian), so it should be able to run on all platforms.  However type size
-    and byte order issues will prevent files that are encoded on one platform
-    from being decoded on another platform.  The code also assumes that an array
-    of <code>unsigned char</code> will be allocated in a contiguous block of
-    memory.</p>
+<p>The code makes no assumptions about the size of types or byte order
+(endian), so it should be able to run on all platforms.  However type size
+and byte order issues will prevent files that are encoded on one platform
+from being decoded on another platform.  The code also assumes that an array
+of <code>unsigned char</code> will be allocated in a contiguous block of
+memory.</p>
 
-    <hr style="width:100%;">
+<hr style="width:100%;">
 
-    <a name="download"></a>
-    <h2>Actual Software</h2>
-    <p>I am releasing my implementations of Huffman's algorithms under the
-    <a href="https://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
-    If you've actually read this page to get all the way down here, you
-    already know that I have different implementations.  In general earlier
-    versions are simpler (maybe easier to follow) and later versions are easier
-    to use as libraries and better suited for projects taking advantage of the
-    LGPL.  In some cases later version also fix minor bugs.  All versions of
-    my source code is available on
-    <a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
-    the latest revision, if you're not looking for something specific.</p>
+<h2 id="download">Actual Software</h2>
+<p>I am releasing my implementations of Huffman's algorithms under the
+<a href="https://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
+If you've actually read this page to get all the way down here, you
+already know that I have different implementations.  In general earlier
+versions are simpler (maybe easier to follow) and later versions are easier
+to use as libraries and better suited for projects taking advantage of the
+LGPL.  In some cases later version also fix minor bugs.  All versions of
+my source code is available on
+<a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
+the latest revision, if you're not looking for something specific.</p>
 
-    <table summary="GitHub Repositories">
-      <tr>
-        <th valign="top" align="left">Repository Location</th>
-        <th valign="top" align="left">
-          <a href="https://github.com/michaeldipperstein/huffman">
-            https://github.com/michaeldipperstein/huffman
-          </a>
-        </th>
-      </tr>
-    </table>
+<table class="repotable">
+  <tr>
+    <th>Repository Location</th>
+    <th>
+      <a href="https://github.com/michaeldipperstein/huffman">
+        https://github.com/michaeldipperstein/huffman
+      </a>
+    </th>
+  </tr>
+</table>
 
-    <p>If you have any further questions or comments, you may contact me by
-    e-mail.  My e-mail address is:
-    <a href="mailto:mdipperstein@gmail.com">mdipperstein@gmail.com</a></p>
+<p>If you have any further questions or comments, you may contact me by
+e-mail.  My e-mail address is:
+<a href="mailto:mdipperstein@gmail.com">mdipperstein@gmail.com</a></p>
 
-</div><!-- ends main-->
+<a href="index.html">Home</a>
 
-</div><!--container1-->
-</div><!--container2-->
-
-<p><a href="./index.html">Home</a><br>
-Last updated on <em>August 2, 2017</em></p>
+<p>Last updated on <em>December 27, 2018</em></p>
 
 </body>
 </html>

@@ -2,6 +2,8 @@ body
 {
     color: #000000;
     background: #CCCCCC;
+    margin-left: 2em;
+    margin-right: 2em;
 }
 
 a:link
