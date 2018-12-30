@@ -1,11 +1,9 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-"http://www.w3.org/TR/html4/strict.dtd">
-
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <title>Michael Dipperstein's Projects Page</title>
-<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
-<meta name="generator" content="Quanta 2.0">
+<meta charset="UTF-8">
+<meta name="author" content="Michael Dipperstein">
 <meta name="description"
     content="Class projects towards an MS in computer science">
 <meta name="keywords" content="projects database consistency">
@@ -14,279 +12,261 @@
 <meta name="keywords" content="ANL macros PARMACS">
 <meta name="keywords" content="DNA sequence search alignment BLAST FastA">
 <meta name="keywords" content="mltp SMP linux threads MxN many-to-many">
-<link rel="stylesheet" href="twocol.css" type="text/css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="newlook.css" type="text/css">
 </head>
-
 <body>
 
-<div id="container2">
-<div id="container1">
+<div class="navbar">
+    <a href="./index.html">Home</a>
 
-<div id="navbar">
-    <h1>Project Index</h1>
-    <hr style="width:90%;text-align: center;">
-
-    <p><a href="./index.html">Home</a></p>
-
-    <h2>Compression</h2>
-    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
-    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
-    <a href="./delta.html">Delta Coding</a><br>
-    <a href="./freq.html">Frequency Substitution</a><br>
-    <a href="./huffman.html">Huffman Coding</a><br>
-    <a href="./lzss.html">LZSS Coding</a><br>
-    <a href="./lzw.html">LZW Coding</a><br>
-    <a href="./rice.html">Rice (Golomb) Coding</a><br>
-    <a href="./rle.html">Run Length Encoding</a></p>
-
-    <h2>Misc. Programming</h2>
-    <p><a href="./projects.html">School Projects</a><br>
-    <a href="./mltp.html">Thesis Project</a><br>
-    <a href="./crypt.html">crypt(3) Source</a><br>
-    <a href="./hamming.html">Hamming Codes</a><br>
-    <a href="./bitarray.html">Bit Array Libraries</a><br>
-    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
-    <a href="./sqrt.html">Square Root Approximation Library</a><br>
-    <a href="./sort.html">Sort Library</a><br>
-    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
-    <a href="./optlist.html">Command Line Option Parser</a><br>
-    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
-    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
-    <a href="./ezini.html">INI File Parser and Creator</a><br>
-    <a href="./sockets.html">Berkeley Sockets Examples</a></p>
-
-    <hr style="width:90%;text-align: center;">
-
-    <h1>Obligatory Links</h1>
-    <a href="http://counter.li.org/">
-        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
-        width="125" height="72">
-    </a><br>
-
-    <a href="https://validator.w3.org/check?uri=referer">
-        <img src="https://www.w3.org/Icons/valid-html401"
-        alt="Valid HTML 4.01 Strict" height="31" width="88">
-    </a>
-</div><!-- ends navbar-->
-
-<div id="main">
-
-    <div id="header">
-        <h1>Michael Dipperstein's<br>
-        MSCS Project Page</h1>
+    <div class="dropdown">
+        <button class="dropbutton">Compression</button>
+        <div class="dropdown-items">
+            <a href="./arithmetic.html">Arithmetic Coding</a>
+            <a href="./bwt.html">Burrows-Wheeler Transform</a>
+            <a href="./delta.html">Delta Coding</a>
+            <a href="./freq.html">Frequency Substitution</a>
+            <a href="./huffman.html">Huffman Coding</a>
+            <a href="./lzss.html">LZSS Coding</a>
+            <a href="./lzw.html">LZW Coding</a>
+            <a href="./rice.html">Rice (Golomb) Coding</a>
+            <a href="./rle.html">Run Length Encoding</a>
+        </div>
     </div>
 
-    <hr style="width:100%;">
+    <div class="dropdown">
+        <button class="dropbutton">Misc. Programming</button>
+        <div class="dropdown-items">
+            <a href="./projects.html">School Projects</a>
+            <a href="./mltp.html">Thesis Project</a>
+            <a href="./crypt.html">crypt(3) Source</a>
+            <a href="./hamming.html">Hamming Codes</a>
+            <a href="./bitarray.html">Bit Array Libraries</a>
+            <a href="./bitfile.html">Bit File Stream Libraries</a>
+            <a href="./sqrt.html">Square Root Approximation Library</a>
+            <a href="./sort.html">Sort Library</a>
+            <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a>
+            <a href="./optlist.html">Command Line Option Parser</a>
+            <a href="./stopwatch.html">POSIX Stopwatch Library</a>
+            <a href="./keypress.html">POSIX Wait for Key Press</a>
+            <a href="./ezini.html">INI File Parser and Creator</a>
+            <a href="./sockets.html">Berkeley Sockets Examples</a>
+        </div>
+    </div>
+</div><!-- ends navbar-->
 
-    <p>Welcome to my MSCS project page.  This page contains links to
-    repositories of some of the projects that I worked on as part of the
-    coursework for an MSCS.  The work is pretty old (I worked on the
-    degree between 1995 and 2000) and the work is becoming increasingly
-    irrelevant, but maybe you'll find something useful.</p>
+<div id="header">
+    <h1>Michael Dipperstein's<br>
+    MSCS Project Page</h1>
+</div>
 
-    <p>If you can't get enough of my projects, check out the links in the
-    column on the right for some of the other stuff I've published.</p>
+<hr style="width:100%;">
 
-    <p>If you have nothing better to do, you can e-mail me at
-    <a href="mailto:mdipperstein@gmail.com">mdipperstein@gmail.com
-    </a></p>
+<p>Welcome to my MSCS project page.  This page contains links to
+repositories of some of the projects that I worked on as part of the
+coursework for an MSCS.  The work is pretty old (I worked on the
+degree between 1995 and 2000) and the work is becoming increasingly
+irrelevant, but maybe you'll find something useful.</p>
 
-    <hr style="width:100%;">
+<p>If you can't get enough of my projects, check out the links in the
+column on the right for some of the other stuff I've published.</p>
 
-    <a name="atm"></a>
-    <h2>Database Consistency Project</h2>
-    <p>This project was created with the help of Kevin O'Gorman
-    (<a href="mailto:kogorman@cs.ucsb.edu">kogorman@cs.ucsb.edu</a>)</p>
+<p>If you have nothing better to do, you can e-mail me at
+<a href="mailto:mdipperstein@gmail.com">mdipperstein@gmail.com
+</a></p>
 
-    <h3>Overview</h3>
+<hr style="width:100%;">
 
-    <p>The ATM Simulation program consists of three independent components:
-    the User Interface, the Web-Monitor, and the Data Repositories (Bank
-    Branches). The components of the ATM Simulation are layered such that the
-    User Interface lies on top of the Web-Monitor, which lies on top of the
-    Data Repositories. Each component of the ATM Simulation communicates
-    only with the component layered above it and the component layered below it.
-    Each component is also designed so that it may be monitored and
-    debugged through a web browser outside of the regular program operation.</p>
+<h2 id="atm">Database Consistency Project</h2>
+<p>This project was created with the help of Kevin O'Gorman
+(<a href="mailto:kogorman@cs.ucsb.edu">kogorman@cs.ucsb.edu</a>)</p>
 
-    <h3>Project Papers</h3>
+<h3>Overview</h3>
 
-    <p>
-        <a href="https://michaeldipperstein.github.io/atm/funcreqs.html">
-        Functional Requirements Document</a><br>
+<p>The ATM Simulation program consists of three independent components:
+the User Interface, the Web-Monitor, and the Data Repositories (Bank
+Branches). The components of the ATM Simulation are layered such that the
+User Interface lies on top of the Web-Monitor, which lies on top of the
+Data Repositories. Each component of the ATM Simulation communicates
+only with the component layered above it and the component layered below it.
+Each component is also designed so that it may be monitored and
+debugged through a web browser outside of the regular program operation.</p>
 
-        <a href="https://michaeldipperstein.github.io/atm/designdoc.html">
-        Design Document</a><br>
+<h3>Project Papers</h3>
 
-        <a href="https://michaeldipperstein.github.io/atm/atm.html">
-        Observations and Innovations</a> (This is the part
-        that is the most interesting)
-    </p>
+<p>
+    <a href="https://michaeldipperstein.github.io/atm/funcreqs.html">
+    Functional Requirements Document</a><br>
 
-    <h3>Project Source</h3>
+    <a href="https://michaeldipperstein.github.io/atm/designdoc.html">
+    Design Document</a><br>
 
-    <p>The ATM project source may be cloned or downloaded from this GitHub
-    repository:<br>
-    <a href="https://github.com/michaeldipperstein/atm">
-    https://github.com/michaeldipperstein/atm</a>.</p>
+    <a href="https://michaeldipperstein.github.io/atm/atm.html">
+    Observations and Innovations</a> (This is the part
+    that is the most interesting)
+</p>
 
-    <p>The source is written in a combination of PERL
-    script and HTML.  The PERL script files are in the repository's
-    <code>cgi</code> subdirectory.  The HTML are in the repository's
-    <code>html</code> subdirectory.<br><br>
+<h3>Project Source</h3>
 
-    After cloning or downloading the repository:</p>
+<p>The ATM project source may be cloned or downloaded from this GitHub
+repository:<br>
+<a href="https://github.com/michaeldipperstein/atm">
+https://github.com/michaeldipperstein/atm</a>.</p>
 
-    <ol style="padding-left: 4pc;">
-    <li>Copy the files from the <code>cgi</code> subdirectory to the directory
-    where your server executes cgi.
-    <li>Copy the files from the <code>html</code> subdirectory to the directory
-    where you keep you HTML files.
-    <li>Edit all the links in the PERL files to point to there new home.
-    <li>Edit all the links in the HTML files to point to there new home.
-    </ol>
+<p>The source is written in a combination of PERL
+script and HTML.  The PERL script files are in the repository's
+<code>cgi</code> subdirectory.  The HTML are in the repository's
+<code>html</code> subdirectory.<br><br>
 
-    <p style="padding-left: 2pc;font-style: italic;">
-    <strong>NOTE:</strong> The PERL scripts use semaphores and shared
-    memory.  Not all PERL distributions provide support for semaphores and
-    shared memory.  It's possible to use files instead of shared memory, and
-    file renaming as a means of obtaining a semaphore (lock).</p>
+After cloning or downloading the repository:</p>
 
-    <hr style="width:100%;">
+<ol style="padding-left: 4pc;">
+<li>Copy the files from the <code>cgi</code> subdirectory to the directory
+where your server executes cgi.
+<li>Copy the files from the <code>html</code> subdirectory to the directory
+where you keep you HTML files.
+<li>Edit all the links in the PERL files to point to there new home.
+<li>Edit all the links in the HTML files to point to there new home.
+</ol>
 
-    <h2>Real-time UDP Data Mixer</h2>
+<p style="padding-left: 2pc;font-style: italic;">
+<strong>NOTE:</strong> The PERL scripts use semaphores and shared
+memory.  Not all PERL distributions provide support for semaphores and
+shared memory.  It's possible to use files instead of shared memory, and
+file renaming as a means of obtaining a semaphore (lock).</p>
 
-    <h3>Overview</h3>
+<hr style="width:100%;">
 
-    <p>This project was written in the latter half of a 10 week course on
-    computer networks.  The goal of the project is to demonstrate some of the
-    techniques that may be used in real-time mixing of UDP data over the
-    current IP network.  It also sheds some light on areas that require advance
-    consideration before a given data mixing service is implemented.  Such
-    areas include:</p>
+<h2>Real-time UDP Data Mixer</h2>
 
-    <ul>
-        <li>mixing method</li>
-        <li>mixing rate</li>
-        <li>packet ordering</li>
-        <li>lost packet handling</li>
-        <li>joining mixing group</li>
-        <li>leaving mixing group</li>
-        <li>mixer resource allocation</li>
-    </ul>
+<h3>Overview</h3>
+
+<p>This project was written in the latter half of a 10 week course on
+computer networks.  The goal of the project is to demonstrate some of the
+techniques that may be used in real-time mixing of UDP data over the
+current IP network.  It also sheds some light on areas that require advance
+consideration before a given data mixing service is implemented.  Such
+areas include:</p>
+
+<ul>
+    <li>mixing method</li>
+    <li>mixing rate</li>
+    <li>packet ordering</li>
+    <li>lost packet handling</li>
+    <li>joining mixing group</li>
+    <li>leaving mixing group</li>
+    <li>mixer resource allocation</li>
+</ul>
 
 
-    <h3>Project Papers</h3>
+<h3>Project Papers</h3>
 
-    <p>I quickly threw together this brief
-    <a href="https://michaeldipperstein.github.io/mixer/index.html">
-    description of the project objectives and source code</a> back in 2000.
-    hopefully it's good enough to get the job done, because the source and
-    it's comments are my only other documentation.</p>
+<p>I quickly threw together this brief
+<a href="https://michaeldipperstein.github.io/mixer/index.html">
+description of the project objectives and source code</a> back in 2000.
+hopefully it's good enough to get the job done, because the source and
+it's comments are my only other documentation.</p>
 
-    <h3>Project Source</h3>
+<h3>Project Source</h3>
 
-    <p>The mixer source is written to build and execute on a Solaris 2.6
-    workstation.  I vaguely remember running it on a machine with a 32-bit
-    x86 Linux 2.2 kernel, but I may have just <code>telnet</code>ed to the
-    Solaris machine form there.</p>
+<p>The mixer source is written to build and execute on a Solaris 2.6
+workstation.  I vaguely remember running it on a machine with a 32-bit
+x86 Linux 2.2 kernel, but I may have just <code>telnet</code>ed to the
+Solaris machine form there.</p>
 
-    <p>The UDP mixer project source may be cloned or downloaded from this GitHub
-    repository:<br>
-    <a href="https://github.com/michaeldipperstein/mixer">
-    https://github.com/michaeldipperstein/mixer</a>.</p>
+<p>The UDP mixer project source may be cloned or downloaded from this GitHub
+repository:<br>
+<a href="https://github.com/michaeldipperstein/mixer">
+https://github.com/michaeldipperstein/mixer</a>.</p>
 
-    <hr style="width:100%;">
+<hr style="width:100%;">
 
-    <h2>Porting and Analysis of SPLASH-2 Ocean Current Simulation</h2>
+<h2>Porting and Analysis of SPLASH-2 Ocean Current Simulation</h2>
 
-    <h3>Overview</h3>
+<h3>Overview</h3>
 
-    <p>This project provides information on the lessons learned and the results
-    of an attempt to translate the Stanford Parallel Applications for Shared
-    Memory (SPLASH-2) ocean simulation program (Ocean) to both Pthread an MPI
-    implementations. Ocean is one of several applications in the SPLASH-2
-    library, intended to benchmark performance on various systems. Initially I
-    set out to use the Ocean program to compare Pthread and MPI performance on
-    both an SGI Origin 2000 and a Cray T3E.  Though I did not accomplish my
-    goals, there are still several valuable lessons learned to report along the
-    way.</p>
+<p>This project provides information on the lessons learned and the results
+of an attempt to translate the Stanford Parallel Applications for Shared
+Memory (SPLASH-2) ocean simulation program (Ocean) to both Pthread an MPI
+implementations. Ocean is one of several applications in the SPLASH-2
+library, intended to benchmark performance on various systems. Initially I
+set out to use the Ocean program to compare Pthread and MPI performance on
+both an SGI Origin 2000 and a Cray T3E.  Though I did not accomplish my
+goals, there are still several valuable lessons learned to report along the
+way.</p>
 
-    <h3>Project Papers</h3>
+<h3>Project Papers</h3>
 
-    <p>
-    <a href="https://web.archive.org/web/20110917225040/http://www-flash.stanford.edu:80/apps/SPLASH/">
-        Wayback Machine mirror of the SPLASH-2 home page</a><br>
+<p>
+<a href="https://web.archive.org/web/20110917225040/http://www-flash.stanford.edu:80/apps/SPLASH/">
+    Wayback Machine mirror of the SPLASH-2 home page</a><br>
 
-    <a href="https://github.com/MichaelDipperstein/ocean/raw/master/docs/sp2ocean.pdf">
-        Initial Report (PDF)</a><br>
+<a href="https://github.com/MichaelDipperstein/ocean/raw/master/docs/sp2ocean.pdf">
+    Initial Report (PDF)</a><br>
 
-    <a href="https://github.com/MichaelDipperstein/ocean/raw/master/docs/speedup.pdf">
-        Additional Results and Comparisons (PDF)</a>
-    </p>
+<a href="https://github.com/MichaelDipperstein/ocean/raw/master/docs/speedup.pdf">
+    Additional Results and Comparisons (PDF)</a>
+</p>
 
-    <h3>Project Source</h3>
+<h3>Project Source</h3>
 
-    <p>The ocean project source and documentation may be cloned or downloaded
-    from this GitHub repository:<br>
-    <a href="https://github.com/michaeldipperstein/ocean">
-    https://github.com/michaeldipperstein/ocean</a>.</p>
+<p>The ocean project source and documentation may be cloned or downloaded
+from this GitHub repository:<br>
+<a href="https://github.com/michaeldipperstein/ocean">
+https://github.com/michaeldipperstein/ocean</a>.</p>
 
-    <p>The source is written to operate on an SGI Origin 2000, though I have
-    executed the p-thread version on a Solaris machine.</p>
+<p>The source is written to operate on an SGI Origin 2000, though I have
+executed the p-thread version on a Solaris machine.</p>
 
-    <p>Libraries converting many of the ANL PARMACS macros for use with
-    pthreads, MPI, and fork with shm on the SGI Origin 2000 are include in the
-    GitHub repository.</p>
+<p>Libraries converting many of the ANL PARMACS macros for use with
+pthreads, MPI, and fork with shm on the SGI Origin 2000 are include in the
+GitHub repository.</p>
 
-    <hr style="width:100%;">
+<hr style="width:100%;">
 
-    <h2>Survey of Nucleotide (DNA) Database Search Techniques</h2>
-    <p>This project was created with the help of Matt Maxel
-    (<a href="mailto:mmaxel@isle.net">mmaxel@isle.net</a>) and
-    Eric Indiran (<a href="mailto:epi@plpt.com">epi@plpt.com</a>)</p>
+<h2>Survey of Nucleotide (DNA) Database Search Techniques</h2>
+<p>This project was created with the help of Matt Maxel
+(<a href="mailto:mmaxel@isle.net">mmaxel@isle.net</a>) and
+Eric Indiran (<a href="mailto:epi@plpt.com">epi@plpt.com</a>)</p>
 
-    <h3>History</h3>
+<h3>History</h3>
 
-    <p>This started as a 7 week project on &quot;DNA Sequence Alignment&quot;,
-    after about a week of study, we came up with the following
-    <a href="https://michaeldipperstein.github.io/dna/project.html">plan</a>.
-    It didn't take to long to realize that we were too ambitious.  The project
-    evolved into a survey of nucleotide database search techniques.</p>
+<p>This started as a 7 week project on &quot;DNA Sequence Alignment&quot;,
+after about a week of study, we came up with the following
+<a href="https://michaeldipperstein.github.io/dna/project.html">plan</a>.
+It didn't take to long to realize that we were too ambitious.  The project
+evolved into a survey of nucleotide database search techniques.</p>
 
-    <h3>Project Papers</h3>
+<h3>Project Papers</h3>
 
-    <p>
-        <a href="https://michaeldipperstein.github.io/dna/dna.ppt">
-            PowerPoint presentation</a><br>
+<p>
+    <a href="https://michaeldipperstein.github.io/dna/dna.ppt">
+        PowerPoint presentation</a><br>
 
-        <a href="https://michaeldipperstein.github.io/dna/DNApaper.html">
-            Project paper</a><br>
+    <a href="https://michaeldipperstein.github.io/dna/DNApaper.html">
+        Project paper</a><br>
 
-        <a href="https://michaeldipperstein.github.io/dna/terms.html">
-            Definitions of related terms</a>
-    </p>
+    <a href="https://michaeldipperstein.github.io/dna/terms.html">
+        Definitions of related terms</a>
+</p>
 
-    <h3>Project Source</h3>
+<h3>Project Source</h3>
 
-    <p>The source of the scripts and used for this project may be cloned or
-    downloaded from this GitHub repository:<br>
-    <a href="https://github.com/michaeldipperstein/dna">
-    https://github.com/michaeldipperstein/dna</a>.</p>
+<p>The source of the scripts and used for this project may be cloned or
+downloaded from this GitHub repository:<br>
+<a href="https://github.com/michaeldipperstein/dna">
+https://github.com/michaeldipperstein/dna</a>.</p>
 
-    <hr style="width:100%;">
+<hr style="width:100%;">
 
-    <h2>MLTP - A Multi-Layer Thread Package for SMP Linux (Thesis Project)</h2>
+<h2>MLTP - A Multi-Layer Thread Package for SMP Linux (Thesis Project)</h2>
 
-    <p>This was my MSCS thesis project.  Please see my <a href="mltp.html">
-    thesis project web page</a> for more information on this project.</p>
-</div><!-- ends main-->
+<p>This was my MSCS thesis project.  Please see my <a href="mltp.html">
+thesis project web page</a> for more information on this project.</p>
 
-</div><!--container1-->
-</div><!--container2-->
-
-<p><a href="index.html">Home</a><br>
-Last updated on <em>August 17, 2017</em></p>
+<a href="index.html">Home</a>
+<p>Last updated on <em>December 29, 2018</em></p>
 
 </body>
 </html>
