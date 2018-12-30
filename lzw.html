@@ -1,1124 +1,1089 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-"http://www.w3.org/TR/html4/strict.dtd">
-
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <title>Lempel-Ziv-Welch (LZW) Encoding Discussion and Implementation</title>
-<meta http-equiv="content-type" content="text/html; charset=utf-8">
-<meta name="generator" content="quanta">
+<meta charset="UTF-8">
+<meta name="author" content="Michael Dipperstein">
 <meta name="keywords"
 content="LZW LZ78 Lempel Ziv Welch Encoding Compression Source">
-<link rel="stylesheet" href="./twocol.css" type="text/css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="newlook.css" type="text/css">
 </head>
-
 <body>
 
-<div id="container2">
-<div id="container1">
+<div class="navbar">
+    <a href="./index.html">Home</a>
 
-<div id="navbar">
-    <h1>Project Index</h1>
-    <hr style="width:90%;text-align: center;">
+    <div class="dropdown">
+        <button class="dropbutton">Compression</button>
+        <div class="dropdown-items">
+            <a href="./arithmetic.html">Arithmetic Coding</a>
+            <a href="./bwt.html">Burrows-Wheeler Transform</a>
+            <a href="./delta.html">Delta Coding</a>
+            <a href="./freq.html">Frequency Substitution</a>
+            <a href="./huffman.html">Huffman Coding</a>
+            <a href="./lzss.html">LZSS Coding</a>
+            <a href="./lzw.html">LZW Coding</a>
+            <a href="./rice.html">Rice (Golomb) Coding</a>
+            <a href="./rle.html">Run Length Encoding</a>
+        </div>
+    </div>
 
-    <p><a href="./index.html">Home</a></p>
-
-    <h2>Compression</h2>
-    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
-    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
-    <a href="./delta.html">Delta Coding</a><br>
-    <a href="./freq.html">Frequency Substitution</a><br>
-    <a href="./huffman.html">Huffman Coding</a><br>
-    <a href="./lzss.html">LZSS Coding</a><br>
-    <a href="./lzw.html">LZW Coding</a><br>
-    <a href="./rice.html">Rice (Golomb) Coding</a><br>
-    <a href="./rle.html">Run Length Encoding</a></p>
-
-    <h2>Misc. Programming</h2>
-    <p><a href="./projects.html">School Projects</a><br>
-    <a href="./mltp.html">Thesis Project</a><br>
-    <a href="./crypt.html">crypt(3) Source</a><br>
-    <a href="./hamming.html">Hamming Codes</a><br>
-    <a href="./bitarray.html">Bit Array Libraries</a><br>
-    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
-    <a href="./sqrt.html">Square Root Approximation Library</a><br>
-    <a href="./sort.html">Sort Library</a><br>
-    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
-    <a href="./optlist.html">Command Line Option Parser</a><br>
-    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
-    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
-    <a href="./ezini.html">INI File Parser and Creator</a><br>
-    <a href="./sockets.html">Berkeley Sockets Examples</a></p>
-
-    <hr style="width:90%;text-align: center;">
-
-    <h1>Obligatory Links</h1>
-    <a href="http://counter.li.org/">
-        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
-        width="125" height="72">
-    </a><br>
-
-    <a href="https://validator.w3.org/check?uri=referer">
-        <img src="https://www.w3.org/Icons/valid-html401"
-        alt="Valid HTML 4.01 Strict" height="31" width="88">
-    </a>
+    <div class="dropdown">
+        <button class="dropbutton">Misc. Programming</button>
+        <div class="dropdown-items">
+            <a href="./projects.html">School Projects</a>
+            <a href="./mltp.html">Thesis Project</a>
+            <a href="./crypt.html">crypt(3) Source</a>
+            <a href="./hamming.html">Hamming Codes</a>
+            <a href="./bitarray.html">Bit Array Libraries</a>
+            <a href="./bitfile.html">Bit File Stream Libraries</a>
+            <a href="./sqrt.html">Square Root Approximation Library</a>
+            <a href="./sort.html">Sort Library</a>
+            <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a>
+            <a href="./optlist.html">Command Line Option Parser</a>
+            <a href="./stopwatch.html">POSIX Stopwatch Library</a>
+            <a href="./keypress.html">POSIX Wait for Key Press</a>
+            <a href="./ezini.html">INI File Parser and Creator</a>
+            <a href="./sockets.html">Berkeley Sockets Examples</a>
+        </div>
+    </div>
 </div><!-- ends navbar-->
 
-<div id="main">
-    <div id="header">
-        <h1>Lempel-Ziv-Welch (LZW) Encoding Discussion and Implementation</h1>
-        <h3>by Michael Dipperstein</h3>
-    </div>
+<div id="header">
+    <h1>Lempel-Ziv-Welch (LZW) Encoding Discussion and Implementation</h1>
+    <h3>by Michael Dipperstein</h3>
+</div>
 
-    <hr style="width:100%;">
+<hr style="width:100%;">
 
-    <p>The need to explore a compression algorithm has struck again.  After
-    playing with <a href="./lzss.html">LZSS (LZ77)</a> I thought LZW
-    (LZ78) was something I should eventually get around to studying.  I've
-    played with several other things since having that thought, but it finally
-    took hold, and became the thing that consumed &quot;free time&quot;</p>
+<p>The need to explore a compression algorithm has struck again.  After
+playing with <a href="./lzss.html">LZSS (LZ77)</a> I thought LZW
+(LZ78) was something I should eventually get around to studying.  I've
+played with several other things since having that thought, but it finally
+took hold, and became the thing that consumed &quot;free time&quot;</p>
 
-    <p>As with my other compression implementations, my intent is to
-    publish an easy to follow ANSI C implementation of the Lempel-Ziv-Welch
-    (LZW) encoding/decoding algorithm.  Anyone familiar with ANSI C and LZW
-    or LZ78 should be able to follow and learn from my implementation.  I'm
-    sure that there's room for improvement of compression ratios, speed,
-    and memory usage, but this project is about learning and sharing, not
-    perfection.</p>
+<p>As with my other compression implementations, my intent is to
+publish an easy to follow ANSI C implementation of the Lempel-Ziv-Welch
+(LZW) encoding/decoding algorithm.  Anyone familiar with ANSI C and LZW
+or LZ78 should be able to follow and learn from my implementation.  I'm
+sure that there's room for improvement of compression ratios, speed,
+and memory usage, but this project is about learning and sharing, not
+perfection.</p>
 
-    <p>Click here for a link to my <a href="#download">LZW source</a>.
-    The rest of this page discusses LZW and my implementation.</p>
+<p>Click here for a link to my <a href="#download">LZW source</a>.
+The rest of this page discusses LZW and my implementation.</p>
 
-    <hr style="width:100%;">
+<hr style="width:100%;">
 
-    <h2>Algorithm Overview</h2>
-    <p>Like it's predecessor <a href="./lzss.html">LZSS (LZ77)</a>, the
-    Lempel-Ziv-Welch algorithm uses a dynamically generated dictionary and
-    and encodes strings by a reference to the dictionary.  It is intended that
-    the dictionary reference should be shorter than the string it replaces.  As
-    you will see, LZW achieves it's goal for all strings larger than 1.</p>
+<h2>Algorithm Overview</h2>
+<p>Like it's predecessor <a href="./lzss.html">LZSS (LZ77)</a>, the
+Lempel-Ziv-Welch algorithm uses a dynamically generated dictionary and
+and encodes strings by a reference to the dictionary.  It is intended that
+the dictionary reference should be shorter than the string it replaces.  As
+you will see, LZW achieves it's goal for all strings larger than 1.</p>
 
-    <a name="encoding"></a>
-    <h3>Encoding</h3>
-    <p>The LZSS algorithm uses a sliding window dictionary.  Each entry in the
-    dictionary is a character.  LZSS code words consist of an offset into the
-    dictionary and the number of characters following the offset to include
-    in an encoded string.</p>
+<h3 id="encoding">Encoding</h3>
+<p>The LZSS algorithm uses a sliding window dictionary.  Each entry in the
+dictionary is a character.  LZSS code words consist of an offset into the
+dictionary and the number of characters following the offset to include
+in an encoded string.</p>
 
-    <p>Unlike LZSS, entries in the LZW dictionary are strings, and every
-    LZW code word is a reference to a string in the dictionary.</p>
+<p>Unlike LZSS, entries in the LZW dictionary are strings, and every
+LZW code word is a reference to a string in the dictionary.</p>
 
-    <p>Okay, so where does the dictionary come from, and why can't I find an
-    entry for my whole file in it?</p>
+<p>Okay, so where does the dictionary come from, and why can't I find an
+entry for my whole file in it?</p>
 
-    <a name="dictionary"></a>
-    <h4>The Dictionary and Encoded Strings</h4>
-    <p>The LZW dictionary is not an external dictionary that lists all known
-    symbol strings.  Instead, the dictionary is initialized with an entry for
-    every possible byte.  Other strings are added as they are built from the
-    input stream.  The code word for a string is simply the next available value
-    at the time it is added to the dictionary.</p>
+<h4 id="dictionary">The Dictionary and Encoded Strings</h4>
+<p>The LZW dictionary is not an external dictionary that lists all known
+symbol strings.  Instead, the dictionary is initialized with an entry for
+every possible byte.  Other strings are added as they are built from the
+input stream.  The code word for a string is simply the next available value
+at the time it is added to the dictionary.</p>
 
-    <p>An &quot;encoded&quot; string is used to add new strings to the
-    dictionary.  The encoded string is built from the input stream.  The input
-    stream is read 1 byte at a time.  If the string formed by concatenating the
-    new byte to the encoded string is in the dictionary, the new byte is added
-    to the end of the encoded string.  Otherwise a dictionary entry is made for
-    the new string and the code word for the coded string is written to the
-    output stream.  Then the byte that was just read becomes thet encoded
-    string.</p>
+<p>An &quot;encoded&quot; string is used to add new strings to the
+dictionary.  The encoded string is built from the input stream.  The input
+stream is read 1 byte at a time.  If the string formed by concatenating the
+new byte to the encoded string is in the dictionary, the new byte is added
+to the end of the encoded string.  Otherwise a dictionary entry is made for
+the new string and the code word for the coded string is written to the
+output stream.  Then the byte that was just read becomes thet encoded
+string.</p>
 
-    <h4>The Basic Encoding Algorithm</h4>
-    <p style="margin-bottom: 0%;">Based on the discussion above, encoding input
-    consists of the following steps:<br>
+<h4>The Basic Encoding Algorithm</h4>
+<p style="margin-bottom: 0%;">Based on the discussion above, encoding input
+consists of the following steps:<br>
 
-    <strong>Step 1.</strong> Initialize dictionary to contain one entry for each
-    byte.  Initialize the encoded string with the first byte of the input
-    stream.<br>
-    <strong>Step 2.</strong> Read the next byte from the input stream.<br>
-    <strong>Step 3.</strong> If the byte is an EOF goto step 6.<br>
-    <strong>Step 4.</strong> If concatenating the byte to the encoded string
-    produces a string that is in the dictionary:</p>
-    <ul style="margin-top: 0%; margin-bottom: 0%; padding-left: 4pc;">
-        <li>concatenate the the byte to the encoded string.
-        <li>go to step 2.
-    </ul>
-    <p style="margin-top: 0%; margin-bottom: 0%;">
-    <strong>Step 5.</strong> If concatenating the byte to the encoded string
-    produces a string that is not in the dictionary:</p>
-    <ul style="margin-top: 0%; margin-bottom: 0%; padding-left: 4pc;">
-        <li>add the new sting to the dictionary.
-        <li>write the code for the encoded string to the output stream.
-        <li>set the encoded string equal to the new byte.
-        <li>go to step 2.
-    </ul>
-    <p style="margin-top: 0%;">
-    <strong>Step 6.</strong> Write out code for encoded string and exit.</p>
+<strong>Step 1.</strong> Initialize dictionary to contain one entry for each
+byte.  Initialize the encoded string with the first byte of the input
+stream.<br>
+<strong>Step 2.</strong> Read the next byte from the input stream.<br>
+<strong>Step 3.</strong> If the byte is an EOF goto step 6.<br>
+<strong>Step 4.</strong> If concatenating the byte to the encoded string
+produces a string that is in the dictionary:</p>
+<ul style="margin-top: 0%; margin-bottom: 0%; padding-left: 4pc;">
+    <li>concatenate the the byte to the encoded string.
+    <li>go to step 2.
+</ul>
+<p style="margin-top: 0%; margin-bottom: 0%;">
+<strong>Step 5.</strong> If concatenating the byte to the encoded string
+produces a string that is not in the dictionary:</p>
+<ul style="margin-top: 0%; margin-bottom: 0%; padding-left: 4pc;">
+    <li>add the new sting to the dictionary.
+    <li>write the code for the encoded string to the output stream.
+    <li>set the encoded string equal to the new byte.
+    <li>go to step 2.
+</ul>
+<p style="margin-top: 0%;">
+<strong>Step 6.</strong> Write out code for encoded string and exit.</p>
 
-    <a name="example1"></a>
-    <p><strong>Example:</strong> The string &quot;this_is_his_thing&quot; is
-    encoded as follows:</p>
+<p id="example1"><strong>Example:</strong> The string &quot;this_is_his_thing&quot; is
+encoded as follows:</p>
 
-    <table border="1" style="table-layout: fixed;width: 300px;"
-        summary="Encoding Example">
-    <tr>
-        <th style="width: 75px;">New Byte</th>
-        <th style="width: 75px;">Encoded String</th>
-        <th style="width: 75px;">New Code</th>
-        <th style="width: 75px;">Code Output</th>
-    </tr>
-    <tr>
-        <td align="center">t</td>
-        <td align="center">t</td>
-        <td><em>None</em></td>
-        <td align="center"><em>None</em></td>
-    </tr>
-    <tr>
-        <td align="center">h</td>
-        <td align="center">h</td>
-        <td>256 (th)</td>
-        <td align="center">t</td>
-    </tr>
-    <tr>
-        <td align="center">i</td>
-        <td align="center">i</td>
-        <td>257 (hi)</td>
-        <td align="center">h</td>
-    </tr>
-    <tr>
-        <td align="center">s</td>
-        <td align="center">s</td>
-        <td>258 (is)</td>
-        <td align="center">i</td>
-    </tr>
-    <tr>
-        <td align="center">_</td>
-        <td align="center">_</td>
-        <td>259 (s_)</td>
-        <td align="center">s</td>
-    </tr>
-    <tr>
-        <td align="center">i</td>
-        <td align="center">i</td>
-        <td>260 (_i)</td>
-        <td align="center">_</td>
-    </tr>
-    <tr>
-        <td align="center">s</td>
-        <td align="center">is</td>
-        <td><i>None</i></td>
-        <td align="center"><em>None</em></td>
-    </tr>
-    <tr>
-        <td align="center">_</td>
-        <td align="center">_</td>
-        <td>261 (is_)</td>
-        <td align="center">258 (is)</td>
-    </tr>
-    <tr>
-        <td align="center">h</td>
-        <td align="center">h</td>
-        <td>262 (_h)</td>
-        <td align="center">_</td>
-    </tr>
-    <tr>
-        <td align="center">i</td>
-        <td align="center">hi</td>
-        <td><em>None</em></td>
-        <td align="center"><i>None</i></td>
-    </tr>
-    <tr>
-        <td align="center">s</td>
-        <td align="center">s</td>
-        <td>263 (his)</td>
-        <td align="center">257 (hi)</td>
-    </tr>
-    <tr>
-        <td align="center">_</td>
-        <td align="center">s_</td>
-        <td><em>None</em></td>
-        <td align="center"><i>None</i></td>
-    </tr>
-    <tr>
-        <td align="center">t</td>
-        <td align="center">t</td>
-        <td>264 (s_t)</td>
-        <td align="center">259 (s_)</td>
-    </tr>
-    <tr>
-        <td align="center">h</td>
-        <td align="center">th</td>
-        <td><i>None</i></td>
-        <td align="center"><i>None</i></td>
-    </tr>
-    <tr>
-        <td align="center">i</td>
-        <td align="center">i</td>
-        <td>265 (thi)</td>
-        <td align="center">256 (th)</td>
-    </tr>
-    <tr>
-        <td align="center">n</td>
-        <td align="center">n</td>
-        <td>266 (in)</td>
-        <td align="center">i</td>
-    </tr>
-    <tr>
-        <td align="center">g</td>
-        <td align="center">g</td>
-        <td>267 (ng)</td>
-        <td align="center">n</td>
-    </tr>
-    <tr>
-        <td align="center"><i>None</i></td>
-        <td align="center"><i>None</i></td>
-        <td><em>None</em></td>
-        <td align="center">g</td>
-    </tr>
-    </table>
+<table class="double-boarder-table" style="table-layout: fixed;">
+<tr>
+    <th style="width: 5em;">New Byte</th>
+    <th style="width: 5em;">Encoded String</th>
+    <th style="width: 5em;">New Code</th>
+    <th style="width: 5em;">Code Output</th>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>t</td>
+    <td>t</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td><em>None</em></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>h</td>
+    <td>h</td>
+    <td style="text-align: left;">256 (th)</td>
+    <td>t</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>i</td>
+    <td>i</td>
+    <td style="text-align: left;">257 (hi)</td>
+    <td>h</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>s</td>
+    <td>s</td>
+    <td style="text-align: left;">258 (is)</td>
+    <td>i</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>_</td>
+    <td>_</td>
+    <td style="text-align: left;">259 (s_)</td>
+    <td>s</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>i</td>
+    <td>i</td>
+    <td style="text-align: left;">60 (_i)</td>
+    <td>_</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>s</td>
+    <td>is</td>
+    <td style="text-align: left;"><i>None</i></td>
+    <td><em>None</em></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>_</td>
+    <td>_</td>
+    <td style="text-align: left;">261 (is_)</td>
+    <td>258 (is)</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>h</td>
+    <td>h</td>
+    <td style="text-align: left;">262 (_h)</td>
+    <td>_</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>i</td>
+    <td>hi</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td><i>None</i></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>s</td>
+    <td>s</td>
+    <td style="text-align: left;">263 (his)</td>
+    <td>257 (hi)</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>_</td>
+    <td>s_</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td><i>None</i></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>t</td>
+    <td>t</td>
+    <td style="text-align: left;">264 (s_t)</td>
+    <td>259 (s_)</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>h</td>
+    <td>th</td>
+    <td style="text-align: left;"><i>None</i></td>
+    <td><i>None</i></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>i</td>
+    <td>i</td>
+    <td style="text-align: left;">265 (thi)</td>
+    <td>256 (th)</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>n</td>
+    <td>n</td>
+    <td style="text-align: left;">266 (in)</td>
+    <td>i</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>g</td>
+    <td>g</td>
+    <td style="text-align: left;">267 (ng)</td>
+    <td>n</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td><i>None</i></td>
+    <td><i>None</i></td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td>g</td>
+</tr>
+</table>
 
-    <p>In the example above, a 17 character string is represented by 13 code
-    words.  Any actual compression that would occur would be based on the size
-    of the code words.  In this example code words could be as short as 9 bits.
-    Typically code words are 12 to 16 bits long.  Of course the typical input
-    stream is also longer than 17 characters.</p>
+<p>In the example above, a 17 character string is represented by 13 code
+words.  Any actual compression that would occur would be based on the size
+of the code words.  In this example code words could be as short as 9 bits.
+Typically code words are 12 to 16 bits long.  Of course the typical input
+stream is also longer than 17 characters.</p>
 
-    <a name="decoding"></a>
-    <h3>Decoding</h3>
-    <p>It shouldn't be a big surprise that LZW data is decoded pretty much
-    the opposite of how it's <a href="#encoding">encoded</a>.  The
-    <a href="#dictionary">dictionary</a> is initialized so that it contains an
-    entry for each byte.  Instead of maintaining an encoded string, the decoding
-    algorithm maintains the last code word and the first character in the string
-    it encodes.  New code words are read from the input stream one at a time and
-    string encoded by the new code is output.</p>
+<h3 id="decoding">Decoding</h3>
+<p>It shouldn't be a big surprise that LZW data is decoded pretty much
+the opposite of how it's <a href="#encoding">encoded</a>.  The
+<a href="#dictionary">dictionary</a> is initialized so that it contains an
+entry for each byte.  Instead of maintaining an encoded string, the decoding
+algorithm maintains the last code word and the first character in the string
+it encodes.  New code words are read from the input stream one at a time and
+string encoded by the new code is output.</p>
 
-    <p>During the encoding process, the code prior to the current code is
-    written because concatenating the first character of the current code with
-    the string encoded by the prior code generated a code that wasn't in the
-    dictionary.  When that happened the string formed by the concatenation was
-    added to the dictionary.  The same string needs to be added to the
-    dictionary when decoding.</p>
+<p>During the encoding process, the code prior to the current code is
+written because concatenating the first character of the current code with
+the string encoded by the prior code generated a code that wasn't in the
+dictionary.  When that happened the string formed by the concatenation was
+added to the dictionary.  The same string needs to be added to the
+dictionary when decoding.</p>
 
-    <h4>The Basic Decoding Algorithm</h4>
-    <p style="margin-bottom: 0%;">Based on the discussion above, decoding input
-    consists of the following steps:<br>
+<h4>The Basic Decoding Algorithm</h4>
+<p style="margin-bottom: 0%;">Based on the discussion above, decoding input
+consists of the following steps:<br>
 
-    <strong>Step 1.</strong> Initialize dictionary to contain one entry for each
-    byte.<br>
-    <strong>Step 2.</strong> Read the first code word from the input stream and
-    write out the byte it encodes.<br>
-    <strong>Step 3.</strong> Read the next code word from the input stream.<br>
-    <strong>Step 4.</strong> If the code word is an EOF exit.<br>
-    <strong>Step 5.</strong> Write out the string encoded by the code word.<br>
-    <strong>Step 6.</strong> Concatenate the first character in the new code
-    word to the string produced by the previous code word and add the resulting
-    string to the dictionary.<br>
-    <strong>Step 7.</strong> Go to step 3.</p>
+<strong>Step 1.</strong> Initialize dictionary to contain one entry for each
+byte.<br>
+<strong>Step 2.</strong> Read the first code word from the input stream and
+write out the byte it encodes.<br>
+<strong>Step 3.</strong> Read the next code word from the input stream.<br>
+<strong>Step 4.</strong> If the code word is an EOF exit.<br>
+<strong>Step 5.</strong> Write out the string encoded by the code word.<br>
+<strong>Step 6.</strong> Concatenate the first character in the new code
+word to the string produced by the previous code word and add the resulting
+string to the dictionary.<br>
+<strong>Step 7.</strong> Go to step 3.</p>
 
-    <a name="example2"></a>
-    <p><strong>Example 2</strong>: Decode the stream 't' 'h' 'i' 's' '_' 258 '_'
-    257 259 256 'i' 'n' 'g' produced by the previous
-    <a href="#example1">example</a></p>
+<p id="example2"><strong>Example 2</strong>: Decode the stream 't' 'h' 'i' 's'
+'_' 258 '_' 257 259 256 'i' 'n' 'g' produced by the previous
+<a href="#example1">example</a></p>
 
-    <table border="1" style="table-layout: fixed;width: 300px;"
-        summary="Decoding Example">
-    <tr>
-        <th style="width: 75px;">Input Code</th>
-        <th style="width: 75px;">Encoded String</th>
-        <th style="width: 75px;">Added Code</th>
-        <th style="width: 75px;">String Output</th>
-    </tr>
-    <tr>
-        <td align="center">t</td>
-        <td align="center">t</td>
-        <td><i>None</i></td>
-        <td align="center">t</td>
-    </tr>
-    <tr>
-        <td align="center">h</td>
-        <td align="center">h</td>
-        <td>256 (th)</td>
-        <td align="center">h</td>
-    </tr>
-    <tr>
-        <td align="center">i</td>
-        <td align="center">i</td>
-        <td>257 (hi)</td>
-        <td align="center">i</td>
-    </tr>
-    <tr>
-        <td align="center">s</td>
-        <td align="center">s</td>
-        <td>258 (is)</td>
-        <td align="center">s</td>
-    </tr>
-    <tr>
-        <td align="center">_</td>
-        <td align="center">_</td>
-        <td>259 (s_)</td>
-        <td align="center">_</td>
-    </tr>
-    <tr>
-        <td align="center">258</td>
-        <td align="center">is</td>
-        <td>260 (_i)</td>
-        <td align="center">is</td>
-    </tr>
-    <tr>
-        <td align="center">_</td>
-        <td align="center">_</td>
-        <td>261 (is_)</td>
-        <td align="center">_</td>
-    </tr>
-    <tr>
-        <td align="center">257</td>
-        <td align="center">hi</td>
-        <td>262 (_h)</td>
-        <td align="center">hi</td>
-    </tr>
-    <tr>
-        <td align="center">259</td>
-        <td align="center">s_</td>
-        <td>263 (his)</td>
-        <td align="center">s_</td>
-    </tr>
-    <tr>
-        <td align="center">256</td>
-        <td align="center">th</td>
-        <td>264 (s_t)</td>
-        <td align="center">th</td>
-    </tr>
-    <tr>
-        <td align="center">i</td>
-        <td align="center">i</td>
-        <td>265 (thi)</td>
-        <td align="center">i</td>
-    </tr>
-    <tr>
-        <td align="center">n</td>
-        <td align="center">n</td>
-        <td>266 (in)</td>
-        <td align="center">n</td>
-    </tr>
-    <tr>
-        <td align="center">g</td>
-        <td align="center">g</td>
-        <td>267 (ng)</td>
-        <td align="center">g</td>
-    </tr>
-    </table>
+<table class="double-boarder-table" style="table-layout: fixed;">
+<tr>
+    <th style="width: 5em;">Input Code</th>
+    <th style="width: 5em;">Encoded String</th>
+    <th style="width: 5em;">Added Code</th>
+    <th style="width: 5em;">String Output</th>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>t</td>
+    <td>t</td>
+    <td style="text-align: left;"><i>None</i></td>
+    <td>t</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>h</td>
+    <td>h</td>
+    <td style="text-align: left;">256 (th)</td>
+    <td>h</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>i</td>
+    <td>i</td>
+    <td style="text-align: left;">257 (hi)</td>
+    <td>i</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>s</td>
+    <td>s</td>
+    <td style="text-align: left;">258 (is)</td>
+    <td>s</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>_</td>
+    <td>_</td>
+    <td style="text-align: left;">259 (s_)</td>
+    <td>_</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>258</td>
+    <td>is</td>
+    <td style="text-align: left;">260 (_i)</td>
+    <td>is</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>_</td>
+    <td>_</td>
+    <td style="text-align: left;">261 (is_)</td>
+    <td>_</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>257</td>
+    <td>hi</td>
+    <td style="text-align: left;">262 (_h)</td>
+    <td>hi</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>259</td>
+    <td>s_</td>
+    <td style="text-align: left;">263 (his)</td>
+    <td>s_</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>256</td>
+    <td>th</td>
+    <td style="text-align: left;">264 (s_t)</td>
+    <td>th</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>i</td>
+    <td>i</td>
+    <td style="text-align: left;">265 (thi)</td>
+    <td>i</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>n</td>
+    <td>n</td>
+    <td style="text-align: left;">266 (in)</td>
+    <td>n</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>g</td>
+    <td>g</td>
+    <td style="text-align: left;">267 (ng)</td>
+    <td>g</td>
+</tr>
+</table>
 
-    <p>The decode string matches the original encoded string, so I must have
-    done something right.  One of my favorite things about LZW is that the
-    decoder doesn't require any additional information from the encoder.
-    There's no need to include extra information commonly required by
-    statistical algorithms like <a href="./huffman.html">Huffman Code</a>
-    and <a href="./arithmetic.html">Arithmetic Code</a>.  So compression
-    ratios are never reduced by extra data cost.</p>
+<p>The decode string matches the original encoded string, so I must have
+done something right.  One of my favorite things about LZW is that the
+decoder doesn't require any additional information from the encoder.
+There's no need to include extra information commonly required by
+statistical algorithms like <a href="./huffman.html">Huffman Code</a>
+and <a href="./arithmetic.html">Arithmetic Code</a>.  So compression
+ratios are never reduced by extra data cost.</p>
 
-    <h4>Exception to the Rules</h4>
-    <p>Whoever said that there's an exception for every rule must have studied
-    LZW.  It turns out that an exception may occur.  When decoding certain input
-    streams the decoder may see a code word that's one larger than anything that
-    it has in it's dictionary.  Fortunately for me others have figured out when
-    the exception happens and how to deal with it.</p>
+<h4>Exception to the Rules</h4>
+<p>Whoever said that there's an exception for every rule must have studied
+LZW.  It turns out that an exception may occur.  When decoding certain input
+streams the decoder may see a code word that's one larger than anything that
+it has in it's dictionary.  Fortunately for me others have figured out when
+the exception happens and how to deal with it.</p>
 
-    <p>The exception occurs if the dictionary contains an entry for
-    <em>string</em> + <em>character</em> and the input stream is
-    <em>string</em> + <em>character</em> + <em>string</em> + <em>character</em>
-    + <em>string</em>.</p>
+<p>The exception occurs if the dictionary contains an entry for
+<em>string</em> + <em>character</em> and the input stream is
+<em>string</em> + <em>character</em> + <em>string</em> + <em>character</em>
++ <em>string</em>.</p>
 
-    <p>When the exception occurs, concatenate the first character of the string
-    encoded by the previous code word to the end of the string encoded by
-    the previous code word.  The resulting string is the value of the new code
-    word.  Write it to the output stream and add it to the dictionary.</p>
+<p>When the exception occurs, concatenate the first character of the string
+encoded by the previous code word to the end of the string encoded by
+the previous code word.  The resulting string is the value of the new code
+word.  Write it to the output stream and add it to the dictionary.</p>
 
-    <a name="example3"></a>
-    <p><strong>Example 2</strong>: The string &quot;abcabcabcabcabcabc&quot;
-    demonstrates an occurrence of the special exception:</p>
+<p id="example3"><strong>Example 3</strong>: The string &quot;abcabcabcabcabcabc&quot;
+demonstrates an occurrence of the special exception:</p>
 
-    <table border="1" style="table-layout: fixed;width: 300px;"
-        summary="Encode Exception">
-    <tr>
-        <th style="width: 75px;">New Byte</th>
-        <th style="width: 75px;">Encoded String</th>
-        <th style="width: 75px;">New Code</th>
-        <th style="width: 75px;">Code Output</th>
-    </tr>
-    <tr>
-        <td align="center">a</td>
-        <td align="center">a</td>
-        <td><em>None</em></td>
-        <td align="center"><em>None</em></td>
-    </tr>
-    <tr>
-        <td align="center">b</td>
-        <td align="center">b</td>
-        <td>256 (ab)</td>
-        <td align="center">a</td>
-    </tr>
-    <tr>
-        <td align="center">c</td>
-        <td align="center">c</td>
-        <td>257 (bc)</td>
-        <td align="center">b</td>
-    </tr>
-    <tr>
-        <td align="center">a</td>
-        <td align="center">a</td>
-        <td>258 (ca)</td>
-        <td align="center">c</td>
-    </tr>
-    <tr>
-        <td align="center">b</td>
-        <td align="center">ab</td>
-        <td><em>None</em></td>
-        <td align="center"><em>None</em></td>
-    </tr>
-    <tr>
-        <td align="center">c</td>
-        <td align="center">c</td>
-        <td>259 (abc)</td>
-        <td align="center">ab (256)</td>
-    </tr>
-    <tr>
-        <td align="center">a</td>
-        <td align="center">ca</td>
-        <td><em>None</em></td>
-        <td align="center"><em>None</em></td>
-    </tr>
-    <tr>
-        <td align="center">b</td>
-        <td align="center">b</td>
-        <td>260 (cab)</td>
-        <td align="center">ca (258)</td>
-    </tr>
-    <tr>
-        <td align="center">c</td>
-        <td align="center">bc</td>
-        <td><em>None</em></td>
-        <td align="center"><em>None</em></td>
-    </tr>
-    <tr>
-        <td align="center">a</td>
-        <td align="center">a</td>
-        <td>261 (bca)</td>
-        <td align="center">257 (bc)</td>
-    </tr>
-    <tr>
-        <td align="center">b</td>
-        <td align="center">ab</td>
-        <td><em>None</em></td>
-        <td align="center"><em>None</em></td>
-    </tr>
-    <tr>
-        <td align="center">c</td>
-        <td align="center">abc</td>
-        <td><em>None</em></td>
-        <td align="center"><em>None</em></td>
-    </tr>
-    <tr>
-        <td align="center">a</td>
-        <td align="center">a</td>
-        <td>262 (abca)</td>
-        <td align="center">259 (abc)</td>
-    </tr>
-    <tr>
-        <td align="center">b</td>
-        <td align="center">ab</td>
-        <td><em>None</em></td>
-        <td align="center"><em>None</em></td>
-    </tr>
-    <tr>
-        <td align="center">c</td>
-        <td align="center">abc</td>
-        <td><em>None</em></td>
-        <td align="center"><em>None</em></td>
-    </tr>
-    <tr>
-        <td align="center">a</td>
-        <td align="center">abca</td>
-        <td><em>None</em></td>
-        <td align="center"><em>None</em></td>
-    </tr>
-    <tr>
-        <td align="center">b</td>
-        <td align="center">b</td>
-        <td>263 (abcab)</td>
-        <td align="center">262 (abca)</td>
-    </tr>
-    <tr>
-        <td align="center">c</td>
-        <td align="center">bc</td>
-        <td><em>None</em></td>
-        <td align="center"><em>None</em></td>
-    </tr>
-    <tr>
-        <td align="center"><em>None</em></td>
-        <td align="center"><em>None</em></td>
-        <td><em>None</em></td>
-        <td align="center">257 (bc)</td>
-    </tr>
-    </table>
+<table class="double-boarder-table" style="table-layout: fixed;">
+<tr>
+    <th style="width: 5em;">New Byte</th>
+    <th style="width: 5em;">Encoded String</th>
+    <th style="width: 5em;">New Code</th>
+    <th style="width: 5em;">Code Output</th>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>a</td>
+    <td>a</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td><em>None</em></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>b</td>
+    <td>b</td>
+    <td style="text-align: left;">256 (ab)</td>
+    <td>a</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>c</td>
+    <td>c</td>
+    <td style="text-align: left;">257 (bc)</td>
+    <td>b</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>a</td>
+    <td>a</td>
+    <td style="text-align: left;">258 (ca)</td>
+    <td>c</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>b</td>
+    <td>ab</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td><em>None</em></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>c</td>
+    <td>c</td>
+    <td style="text-align: left;">259 (abc)</td>
+    <td>ab (256)</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>a</td>
+    <td>ca</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td><em>None</em></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>b</td>
+    <td>b</td>
+    <td style="text-align: left;">260 (cab)</td>
+    <td>ca (258)</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>c</td>
+    <td>bc</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td><em>None</em></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>a</td>
+    <td>a</td>
+    <td style="text-align: left;">261 (bca)</td>
+    <td>257 (bc)</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>b</td>
+    <td>ab</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td><em>None</em></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>c</td>
+    <td>abc</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td><em>None</em></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>a</td>
+    <td>a</td>
+    <td style="text-align: left;">262 (abca)</td>
+    <td>259 (abc)</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>b</td>
+    <td>ab</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td><em>None</em></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>c</td>
+    <td>abc</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td><em>None</em></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>a</td>
+    <td>abca</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td><em>None</em></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>b</td>
+    <td>b</td>
+    <td style="text-align: left;">263 (abcab)</td>
+    <td>262 (abca)</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>c</td>
+    <td>bc</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td><em>None</em></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td><em>None</em></td>
+    <td><em>None</em></td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td>257 (bc)</td>
+</tr>
+</table>
 
-    <p>Wow!  That's a lot of work to force an exception to occur.  The results
-    still need to be decoded in order to witness the exception in action.
+<p>Wow!  That's a lot of work to force an exception to occur.  The results
+still need to be decoded in order to witness the exception in action.
+</p>
+
+<table class="double-boarder-table" style="table-layout: fixed;">
+<tr>
+    <th style="width: 5em;">Input Code</th>
+    <th style="width: 5em;">Encoded String</th>
+    <th style="width: 5em;">Added Code</th>
+    <th style="width: 5em;">String Output</th>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>a</td>
+    <td>a</td>
+    <td style="text-align: left;"><em>None</em></td>
+    <td>a</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>b</td>
+    <td>b</td>
+    <td style="text-align: left;">256 (ab)</td>
+    <td>b</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>c</td>
+    <td>c</td>
+    <td style="text-align: left;">257 (bc)</td>
+    <td>c</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>256</td>
+    <td>ab</td>
+    <td style="text-align: left;">258 (ca)</td>
+    <td>ab</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>258</td>
+    <td>ca</td>
+    <td style="text-align: left;">259 (abc)</td>
+    <td>ca</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>257</td>
+    <td>bc</td>
+    <td style="text-align: left;">60 (cab)</td>
+    <td>bc</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>259</td>
+    <td>abc</td>
+    <td style="text-align: left;">261 (bca)</td>
+    <td></td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>262</td>
+    <td><em>Not In Dictionary</em></td>
+    <td style="text-align: left;">abca</td>
+    <td>abca</td>
+</tr>
+<tr>
+    <td colspan="4"><strong>NOTE:</strong> The above step
+    demonstrates the exception and how it is handled.  (New encoded string
+    = old encoded string + the first character of the old encoded string
+    = abc + a = abca)</td>
+</tr>
+<tr style="text-align: center; vertical-align: bottom;">
+    <td>257</td>
+    <td>bc</td>
+    <td style="text-align: left;">263 (abcab)</td>
+    <td>bc</td>
+</tr>
+</table>
+
+<p>There you have it, the exception and how it's handled.  It can be made to
+occur with a shorter pattern of repeated 2 character strings like
+&quot;ababababababab&quot;, but I doesn't make as nice of an example.</p>
+
+<p>That's all there is to the LZW algorithm.  There are a few more issues to
+consider when actually implementing the algorithm on a computer.  You should
+to read on if you care about them.</p>
+
+<hr style="width:100%;">
+
+<h2>Implementation Issues</h2>
+
+<p>As I have stated the introduction, my intent is to publish an easy to
+follow ANSI C implementation of the Lempel-Ziv-Welch Encoding (LZW)
+encoding/decoding algorithm.  I have also tried to make the code
+<a href="#portability">portable</a>.  Those goals drove much of this
+implementation.</p>
+
+<h3>Size of Code Word</h3>
+
+<p>One of the first things that needs to be decided when implementing LZW is
+how big of a code word to use.  The following items should be considered
+when choosing a code word size:</p>
+<ul>
+    <li>Code words must be bigger than a length 1 string of what ever is
+    encoded.
+
+    <li>All encoded strings (including length 1 strings) will require a code
+    word to represent them.
+
+    <li>Larger code words mean more entries may be contained in a
+    dictionary.
+
+    <li>Consider code word endian/byte order issues if the LZW is
+    implementation will be used on different platforms.
+</ul>
+
+<p>I encode strings of bytes, so the size of a code word must be bigger
+than a byte.  That rules out any code words 8 bits or less.</p>
+
+<p>I also don't want the code word to be huge, because even size 1 strings
+will be written as a code word.  <a href="#example1">Example 1</a> encodes
+a 17 byte (136 bit) string into 13 code words.  If the code words were only
+9 bits long, the encoded data would be 117 bits.  However if the code words
+were 16 bits long, the encoded data would be 208 bits.  Typically, a larger
+data set must be encoded before longer code words produce any compression.
+</p>
+
+<p>Code word size also has an impact on the maximum number of strings in a
+dictionary.  An n bit code word may have as many as 2<sup>n</sup> strings in
+it's dictionary.  If you're encoding bytes the first 256 of those strings
+will be single bytes.</p>
+
+<p>Larger dictionaries can contain codes for more strings and that typically
+improves compression.  The downside is that the encoding algorithm needs to
+search the dictionary for matches to the current string.  Search time
+increases with the size of the dictionary.</p>
+
+<p>With so many factors to consider, I ended up using 12 bit code words for
+my version 0.1 implementation.  It's really easy to modify my version 0.1
+implementation to use 9 to 15 bits.  I settled on 12 bits after trying all
+values between 9 and 15 on a random set of files between 1K and 128K in
+size.  The test was highly unscientific, but the 12 bit code words had the
+best average compression results.</p>
+
+<p>I got a little fancier with my version 0.2 implementation.  I begin with
+a 9 bit code word, but allow the bit length to increase up to 15 bits as
+more code words are generated.  It is usually the case that a data stream
+can be compressed with code words that start at 9 bits and grow to n bits
+better than it can be compressed with a fixed n bit code word.  I use the
+word &quot;usually&quot;, because there is a little overhead required to
+indicate that the code word size has changed (see
+<a href="#cw_length_encode">Indicating Code Word Length</a>).</p>
+
+<p>Feel free to change the code word size for any reason that you might
+have.  If you increase it beyond 15 bits, things will blow up on machines
+with 16 bit integers.  If you increase the code word size to more than 16
+bits, you'll need to modify the routines that read and write code words.</p>
+
+
+<h3 id="strings">Representing Strings in the Dictionary</h3>
+
+<p>The dictionary in the Lempel-Ziv-Welch algorithm provides a way of
+associating strings with code words.  Code words are of limited length.
+However, the LZW algorithm does not impose a limit on the length of strings
+that are encoded.</p>
+
+<p>One way to represent strings of arbitrary length is by a NULL terminated
+array.  With LZW, it's possible to have thousands of strings thousands of
+bytes long.  As machine memory sizes increase, there may come a time when
+the memory requirements of NULL terminated strings isn't a big deal.
+I'm still using a vintage PC, so NULL terminated strings are out of the
+question.</p>
+
+<p>Fortunately, somebody much smarter than me observed that all strings
+entered into the dictionary either have a size of 1, or consist of a
+character appended to a string that is in the dictionary.  The string that's
+already in the dictionary must also have a code word associated with it.
+Rather then representing the new string as <em>old string</em> +
+<em>character</em>, it can be represented as <em>code word for old
+string</em> + <em>character</em>.</p>
+
+<p>In <a href="#example1">Example 1</a> the code 263 represents the string
+&quot;his&quot;. Rather than creating a dictionary entry for code word 263
+and &quot;his&quot;, an entry can be made for the code word 263, the prefix
+code 257, and byte 's'.  Every dictionary entry consists of the code word,
+the prefix code, and the last character in the string.</p>
+
+<p>The big advantage to this scheme is that all strings in the dictionary
+are stored as a small, fixed length value.  The downside to this scheme is
+that you need to traverse the dictionary to determine what string a code
+word encodes.  263 encodes 257 + 's'.  257 encodes 'h' + 'i'.  That's not
+too bad with 3  character strings, but it's not that fun with 1000 character
+strings.  Still, having a known fixed length for dictionary entries
+outweighs the need to traverse the dictionary.</p>
+
+<h3>Encoding Issues</h3>
+<p>The biggest considerations when implementing the LZW encoding algorithm
+are:</p>
+<ul>
+    <li>Writing of code words that aren't an integral number of bytes.
+    <li>Indicating the length of a code word.
+    <li>The layout of the dictionary.
+    <li>Finding string matches in the dictionary.
+    <li>Inserting new strings into the dictionary.
+</ul>
+
+<p>Fortunately, writing code words wasn't that big of a deal.  I have a
+<a href="./bitfile.html">bit file library</a> containing functions
+for writing files one bit at a time.  I use the same library for all of my
+other compression implementations, and it works just fine for LZW.</p>
+
+<h4 id="cw_length_encode">Indicating Code Word Length</h4>
+<p>The problem of indicating how long code words are only occurs when
+variable length code words are used.  If fixed length code words are used,
+there's no question about how many bits the decoder should use when reading
+the encoded data.</p>
+
+<p>I'm not sure what the common practice is for variable length code words
+and leaving hints that allow the decoder to recognize a code word length
+change.  My implementation is based on some ideas that kept me up one night,
+and it works just fine.  There are two observations that lead me to my
+implementation:</p>
+
+<ol>
+    <li>Code words may be n bits long until the encoder is required to write
+    a code word that needs n + 1 bits to represent it.
+    <li>The indication that n + 1 bits are needed must be n bits long,
+    because decoder is still reading n bits at time.
+</ol>
+
+<p>With those observations, everything fell into place.  When the encoder
+needs n + 1 bits to write out a code word, it writes an n bit indicator.
+Then all code words from that indicator until the next indicator will be
+written using n + 1 bits.  Once an indicator signals increased code word
+size, there is no way to decrease code word size.</p>
+
+<p>For my indicator I use a code word of all ones at the current code word
+length.  The consequence of using an all ones indicator is that the code
+word represented by that value also requires an extra bit.  Suppose the
+encoder is using 9 bits and it needs to output the code word 511.  511 is
+9 bits of all ones.  A single 511 will cause the decoder to switch to
+reading 10 bit code words without decoding code word 511.  To get around
+this, the encoder must write an indicator (511 in this case) to switch to
+10 bits, then it must write the code word 511 using 10 bits.</p>
+
+<p>Version 0.2 of my implementation starts out using 9 bit code words and
+allows the code word length to grow to 15 bits.</p>
+
+<h4>Dictionary Layout</h4>
+<p>Determining the layout of the dictionary most definitely impacts finding
+and inserting strings.  The dictionary stores <a href="#strings">strings</a>
+represented as a code word prefix and a byte suffix.</p>
+
+<p>Initially, the dictionary will contain one entry for every one character
+string.  However, the number of strings in the dictionary may grow as the
+encoding process proceeds.  Fortunately there is an upper bound on the
+number of strings that may be in the dictionary.  If code words are n bits
+long, there can only be 2<sup>n</sup> unique code words.</p>
+
+<p>The only real requirement for an LZW dictionary is that it can store
+2<sup>n</sup> code word/string pairs.  It seemed natural to use an array of
+2<sup>n</sup> code word/string entries to me.  I started out with a
+dictionary  that was an array of 2<sup>n</sup> entries, but as I started
+playing with the algorithm I realized that all strings 1 byte long are
+encoded by the value of the byte.  It's much faster to just write out the
+value of the byte than it is to look them up in the dictionary.  So my
+implementation uses an array based dictionary only stores up to
+(2<sup>n</sup> - 256) strings.  Single byte strings were handled without
+using the dictionary.</p>
+
+<p>As natural as an array based dictionary seems, it can be really slow to
+search when the dictionary fills up (see <a href="#searching">below</a>).
+Recently I have replaced the array based dictionary with a binary tree based
+dictionary to speed up average search time.  Anybody who has seen a binary
+tree should be comfortable with my implementation.</p>
+
+<h4 id="searching">Searching for and Inserting Strings in Dictionary</h4>
+<p>Though being able to store all the code words is the only real dictionary
+requirement, the ability to perform fast search and insertion operations is
+also desirable.</p>
+
+<p>Every time the encoding algorithm reads a byte, it appends it to a string
+that it is building.  The first thing it does with the string is look for it
+in the dictionary.  If the string isn't in the dictionary and the dictionary
+isn't full, the encoding algorithm will insert the string into the
+dictionary.  There is one dictionary search for each byte in the uncoded
+data stream, and there will be one insertion for each new code word.</p>
+
+<p>The simplest way to search an array based dictionary is by brute force,
+from start to finish.  Similarly the simplest way to insert strings into the
+dictionary is to start at the beginning and keep looking until an empty
+location is found.  These simple brute force approaches are O(N), where N is
+the number of code words (which is O(2<sup>n</sup>) where n is the number of
+bits in a code word).</p>
+
+<p>It would really be nice to have something faster without adding much
+computational overhead.  Others have successfully used hashing to speed up
+searches and insertions.  The ideal hash function will make searching and
+insertion O(1) operations.  I haven't come up with that function yet.
+Rather than being creative I used a simple function to generate a hash
+key that is used as an initial index into the dictionary.  First I shifted
+the string's code prefix by 8 bits and <code>OR</code> in it's final
+character.  That gives me an n + 8 bit number.  I used that number modulo
+the size of the dictionary to get my initial key.</p>
+
+<div style="padding-left: 2pc;">
+<code>
+    key = (codeWord &lt;&lt; 8) | lastCharacter;<br>
+    key = key % dictionarySize;
+</code>
+</div>
+
+<p>The first dictionary index I checked is the value of the key.
+Unfortunately collisions are possible.  In the case of searching for a
+match, a collision occurs when there's a string already located in the
+dictionary position, but it doesn't match the string that we're looking for.
+My collision resolution was simple, but no more efficient than a brute force
+source.  I search the next dictionary indices until I've either: found a
+match, searched the entire dictionary, or found an empty dictionary
+location.</p>
+
+<p>If the dictionary is full, the array based algorithm will take O(N)
+searches to discover that a string is not in the dictionary.  I realized
+that I could increase the size of the dictionary array, so that it will
+always include empty entries and stop the search if I arrive at an empty
+entry, but that just cuts the search time to an average of O(N/2).</p>
+
+<p>Rather than using a larger array, I chose to use a binary tree.  It takes
+an average of O(log(N)) searches to discover that a string isn't in the full
+dictionary.  I'm not making much of an effort to balance my tree, so worst
+case is still O(N), but I don't think there will be many naturally occurring
+data streams that produce that result.</p>
+
+<p>In order to keep the binary tree close to balanced, dictionary entries
+are ordered using a simple key.  I append the code for the prefix sting to
+the MS nibble of the new character, then I append the LS nibble to that.</p>
+
+<div style="padding-left: 2pc;">
+<code>
+    key = (lastCharacter &amp; 0xF0) &lt;&lt; (codeWordLength)<br>
+    key |= (prefix &lt;&lt; 4);<br>
+    key |= (lastCharacter &amp; 0x0F)
+</code>
+</div>
+
+<p>It's possible that I may have future code release using balanced trees.
+But that will take motivation and time.</p>
+
+<p>One nice side effect of these methods are that they don't require any
+additional work to find an insertion location for a new string.  Strings are
+only inserted into the dictionary when a match isn't found and there is
+room to insert the string.  If the array based search algorithm ends because
+it found an empty dictionary location, there wasn't a match and the
+dictionary isn't full.  The new string and its new code word is inserted
+into the empty dictionary location where the search algorithm stopped.  In
+the case of the tree based search, when it ends without a match, the new
+entry is inserted as the child of the leaf where the search ended.</p>
+
+<h5>Idea for Super-fast Search/Insertion</h5>
+<p>The whole dictionary search and insertion process may be trivialized by
+increasing the size of the dictionary so that it has one index for every
+possible code word prefix/byte suffix string.  If code words are n bits
+long, then there are 2<sup>n + 8</sup> different possible strings; no more
+than 2<sup>n</sup> of which will actually be used.  The dictionary can then
+be implemented as a 2<sup>n + 8</sup> array, where each entry is either
+empty or contains the code word for the code word prefix/byte suffix pair
+represented by that index.</p>
+
+<h3>Decoding Issues</h3>
+<p>The biggest considerations when implementing the LZW decoding algorithm
+are:</p>
+<ul>
+    <li>Reading of code words that aren't an integral number of bytes.
+    <li>Determining the length of a code word.
+    <li>The layout of the dictionary.
+    <li>Decoding code words to strings.
+</ul>
+
+<p>As with writing code words, reading code words wasn't that big of a deal.
+I use my <a href="./bitfile.html">bit file library</a> here too.</p>
+
+<h4 id="cw_length_decode">Determining Code Word Length</h4>
+<p>The problem of determining the length of code words is only an issue when
+variable length code words are allowed.  In the section on
+<a href="#cw_length_encode">encoding</a>, I discuss a method that uses an
+all ones indicator when code word bit lengths are to increase by one.  When
+my decoder reads a code word that is all ones bits, it must increase the
+code word length by one bit without decoding that code word.  All code words
+that follow are read using the new length and operation proceeds normally.
+</p>
+
+<p>Version 0.2 of my implementation starts out using 9 bit code words and
+allows the code word length to grow to 15 bits.</p>
+
+<h4>Dictionary Layout</h4>
+<p>The dictionary organization used for encoding would work just fine for
+decoding, however it's more complicated then it needs to be.  During the
+encoding process strings are created and the dictionary is searched to see
+if code words already exits for that string.  The decoding algorithm reads
+the encoded stream 1 code word at a time and uses the dictionary to find out
+how to decode a code word.  Simply restated, encoding searches the
+dictionary based on string value.  Decoding searches the dictionary based on
+code word value.</p>
+
+<p>My decoding dictionary is just an array of 2<sup>n</sup>
+<a href="#strings">strings</a> where the array index is the code word that
+encodes the string.</p>
+
+<h4>Decoding Code Words into Strings</h4>
+<p>After it reads a code word, the decoding algorithm will look up the code
+word in the dictionary and write out the encoded string that it encodes.
+Normally that wouldn't be an issue.  However, strings in the dictionary are
+stored as a prefix code word + a suffix byte.  In order to decode a code
+word into a string of bytes, the prefix code of the string must also be
+decoded.  The process of decoding prefix strings continues until a prefix
+string decodes to a 1 byte string.  The process of decoding strings builds
+the string being decoded in reverse order.</p>
+
+<p>The processes of decoding code words into another code word and a byte
+and writing all the bytes out in the reverse order of their decoding made me
+think of recursion.  I don't have much of an opportunity to use recursion in
+my paying job, so the idea of implementing a recursive decode routine seemed
+&quot;fun&quot;.  If you'd rather avoid recursion, store the decoded
+characters into an array that is at least 2<sup>n</sup> - 256 bytes long,
+then write out the results in reverse order.</p>
+
+<hr style="width:100%;">
+
+<h2>Further Information</h2>
+<p>I found Mark Nelson's Dr. Dobb's Journal
+<a href="http://marknelson.us/1989/10/01/lzw-data-compression/">
+article</a> be very helpful.  He even provides source for a slightly
+different implementation.</p>
+
+<hr style="width:100%;">
+
+<h2>C Library Code Interface</h2>
+<div id="api">
+    <h3>Encoding Data</h3>
+    <h4>LZWEncodeFile</h4>
+    <p class="section">Declaration:</p>
+    <p class="indent">
+        <code>int LZWEncodeFile(FILE *fpIn, FILE *fpOut);</code>
     </p>
 
-    <table border="1" style="table-layout:fixed;width:300px;"
-        summary="Decode Exception">
-    <tr>
-        <th style="width: 75px;">Input Code</th>
-        <th style="width: 75px;">Encoded String</th>
-        <th style="width: 75px;">Added Code</th>
-        <th style="width: 75px;">String Output</th>
-    </tr>
-    <tr>
-        <td align="center">a</td>
-        <td align="center">a</td>
-        <td><em>None</em></td>
-        <td align="center">a</td>
-    </tr>
-    <tr>
-        <td align="center">b</td>
-        <td align="center">b</td>
-        <td>256 (ab)</td>
-        <td align="center">b</td>
-    </tr>
-    <tr>
-        <td align="center">c</td>
-        <td align="center">c</td>
-        <td>257 (bc)</td>
-        <td align="center">c</td>
-    </tr>
-    <tr>
-        <td align="center">256</td>
-        <td align="center">ab</td>
-        <td>258 (ca)</td>
-        <td align="center">ab</td>
-    </tr>
-    <tr>
-        <td align="center">258</td>
-        <td align="center">ca</td>
-        <td>259 (abc)</td>
-        <td align="center">ca</td>
-    </tr>
-    <tr>
-        <td align="center">257</td>
-        <td align="center">bc</td>
-        <td>260 (cab)</td>
-        <td align="center">bc</td>
-    </tr>
-    <tr>
-        <td align="center">259</td>
-        <td align="center">abc</td>
-        <td>261 (bca)</td>
-        <td align="center"></td>
-    </tr>
-    <tr>
-        <td align="center">262</td>
-        <td align="center"><em>Not In Dictionary</em></td>
-        <td>abca</td>
-        <td align="center">abca</td>
-    </tr>
-    <tr>
-        <td colspan="4"><strong>NOTE:</strong> The above step
-        demonstrates the exception and how it is handled.  (New encoded string
-        = old encoded string + the first character of the old encoded string
-        = abc + a = abca)</td>
-    </tr>
-    <tr>
-        <td align="center">257</td>
-        <td align="center">bc</td>
-        <td>263 (abcab)</td>
-        <td align="center">bc</td>
-    </tr>
-    </table>
-
-    <p>There you have it, the exception and how it's handled.  It can be made to
-    occur with a shorter pattern of repeated 2 character strings like
-    &quot;ababababababab&quot;, but I doesn't make as nice of an example.</p>
-
-    <p>That's all there is to the LZW algorithm.  There are a few more issues to
-    consider when actually implementing the algorithm on a computer.  You should
-    to read on if you care about them.</p>
-
-    <hr style="width:100%;">
-
-    <h2>Implementation Issues</h2>
-
-    <p>As I have stated the introduction, my intent is to publish an easy to
-    follow ANSI C implementation of the Lempel-Ziv-Welch Encoding (LZW)
-    encoding/decoding algorithm.  I have also tried to make the code
-    <a href="#portability">portable</a>.  Those goals drove much of this
-    implementation.</p>
-
-    <h3>Size of Code Word</h3>
-
-    <p>One of the first things that needs to be decided when implementing LZW is
-    how big of a code word to use.  The following items should be considered
-    when choosing a code word size:</p>
-    <ul>
-        <li>Code words must be bigger than a length 1 string of what ever is
-        encoded.
-
-        <li>All encoded strings (including length 1 strings) will require a code
-        word to represent them.
-
-        <li>Larger code words mean more entries may be contained in a
-        dictionary.
-
-        <li>Consider code word endian/byte order issues if the LZW is
-        implementation will be used on different platforms.
-    </ul>
-
-    <p>I encode strings of bytes, so the size of a code word must be bigger
-    than a byte.  That rules out any code words 8 bits or less.</p>
-
-    <p>I also don't want the code word to be huge, because even size 1 strings
-    will be written as a code word.  <a href="#example1">Example 1</a> encodes
-    a 17 byte (136 bit) string into 13 code words.  If the code words were only
-    9 bits long, the encoded data would be 117 bits.  However if the code words
-    were 16 bits long, the encoded data would be 208 bits.  Typically, a larger
-    data set must be encoded before longer code words produce any compression.
+    <p class="section">Description:</p>
+    <p class="indent">
+        This routine reads an input file one character at a time and writes
+        out an LZW encoded version of that file.
     </p>
 
-    <p>Code word size also has an impact on the maximum number of strings in a
-    dictionary.  An n bit code word may have as many as 2<sup>n</sup> strings in
-    it's dictionary.  If you're encoding bytes the first 256 of those strings
-    will be single bytes.</p>
-
-    <p>Larger dictionaries can contain codes for more strings and that typically
-    improves compression.  The downside is that the encoding algorithm needs to
-    search the dictionary for matches to the current string.  Search time
-    increases with the size of the dictionary.</p>
-
-    <p>With so many factors to consider, I ended up using 12 bit code words for
-    my version 0.1 implementation.  It's really easy to modify my version 0.1
-    implementation to use 9 to 15 bits.  I settled on 12 bits after trying all
-    values between 9 and 15 on a random set of files between 1K and 128K in
-    size.  The test was highly unscientific, but the 12 bit code words had the
-    best average compression results.</p>
-
-    <p>I got a little fancier with my version 0.2 implementation.  I begin with
-    a 9 bit code word, but allow the bit length to increase up to 15 bits as
-    more code words are generated.  It is usually the case that a data stream
-    can be compressed with code words that start at 9 bits and grow to n bits
-    better than it can be compressed with a fixed n bit code word.  I use the
-    word &quot;usually&quot;, because there is a little overhead required to
-    indicate that the code word size has changed (see
-    <a href="#cw_length_encode">Indicating Code Word Length</a>).</p>
-
-    <p>Feel free to change the code word size for any reason that you might
-    have.  If you increase it beyond 15 bits, things will blow up on machines
-    with 16 bit integers.  If you increase the code word size to more than 16
-    bits, you'll need to modify the routines that read and write code words.</p>
-
-
-    <a name="strings"></a>
-    <h3>Representing Strings in the Dictionary</h3>
-
-    <p>The dictionary in the Lempel-Ziv-Welch algorithm provides a way of
-    associating strings with code words.  Code words are of limited length.
-    However, the LZW algorithm does not impose a limit on the length of strings
-    that are encoded.</p>
-
-    <p>One way to represent strings of arbitrary length is by a NULL terminated
-    array.  With LZW, it's possible to have thousands of strings thousands of
-    bytes long.  As machine memory sizes increase, there may come a time when
-    the memory requirements of NULL terminated strings isn't a big deal.
-    I'm still using a vintage PC, so NULL terminated strings are out of the
-    question.</p>
-
-    <p>Fortunately, somebody much smarter than me observed that all strings
-    entered into the dictionary either have a size of 1, or consist of a
-    character appended to a string that is in the dictionary.  The string that's
-    already in the dictionary must also have a code word associated with it.
-    Rather then representing the new string as <em>old string</em> +
-    <em>character</em>, it can be represented as <em>code word for old
-    string</em> + <em>character</em>.</p>
-
-    <p>In <a href="#example1">Example 1</a> the code 263 represents the string
-    &quot;his&quot;. Rather than creating a dictionary entry for code word 263
-    and &quot;his&quot;, an entry can be made for the code word 263, the prefix
-    code 257, and byte 's'.  Every dictionary entry consists of the code word,
-    the prefix code, and the last character in the string.</p>
-
-    <p>The big advantage to this scheme is that all strings in the dictionary
-    are stored as a small, fixed length value.  The downside to this scheme is
-    that you need to traverse the dictionary to determine what string a code
-    word encodes.  263 encodes 257 + 's'.  257 encodes 'h' + 'i'.  That's not
-    too bad with 3  character strings, but it's not that fun with 1000 character
-    strings.  Still, having a known fixed length for dictionary entries
-    outweighs the need to traverse the dictionary.</p>
-
-    <h3>Encoding Issues</h3>
-    <p>The biggest considerations when implementing the LZW encoding algorithm
-    are:</p>
-    <ul>
-        <li>Writing of code words that aren't an integral number of bytes.
-        <li>Indicating the length of a code word.
-        <li>The layout of the dictionary.
-        <li>Finding string matches in the dictionary.
-        <li>Inserting new strings into the dictionary.
-    </ul>
-
-    <p>Fortunately, writing code words wasn't that big of a deal.  I have a
-    <a href="./bitfile.html">bit file library</a> containing functions
-    for writing files one bit at a time.  I use the same library for all of my
-    other compression implementations, and it works just fine for LZW.</p>
-
-    <a name="cw_length_encode"></a>
-    <h4>Indicating Code Word Length</h4>
-    <p>The problem of indicating how long code words are only occurs when
-    variable length code words are used.  If fixed length code words are used,
-    there's no question about how many bits the decoder should use when reading
-    the encoded data.</p>
-
-    <p>I'm not sure what the common practice is for variable length code words
-    and leaving hints that allow the decoder to recognize a code word length
-    change.  My implementation is based on some ideas that kept me up one night,
-    and it works just fine.  There are two observations that lead me to my
-    implementation:</p>
-
-    <ol>
-        <li>Code words may be n bits long until the encoder is required to write
-        a code word that needs n + 1 bits to represent it.
-        <li>The indication that n + 1 bits are needed must be n bits long,
-        because decoder is still reading n bits at time.
-    </ol>
-
-    <p>With those observations, everything fell into place.  When the encoder
-    needs n + 1 bits to write out a code word, it writes an n bit indicator.
-    Then all code words from that indicator until the next indicator will be
-    written using n + 1 bits.  Once an indicator signals increased code word
-    size, there is no way to decrease code word size.</p>
-
-    <p>For my indicator I use a code word of all ones at the current code word
-    length.  The consequence of using an all ones indicator is that the code
-    word represented by that value also requires an extra bit.  Suppose the
-    encoder is using 9 bits and it needs to output the code word 511.  511 is
-    9 bits of all ones.  A single 511 will cause the decoder to switch to
-    reading 10 bit code words without decoding code word 511.  To get around
-    this, the encoder must write an indicator (511 in this case) to switch to
-    10 bits, then it must write the code word 511 using 10 bits.</p>
-
-    <p>Version 0.2 of my implementation starts out using 9 bit code words and
-    allows the code word length to grow to 15 bits.</p>
-
-    <h4>Dictionary Layout</h4>
-    <p>Determining the layout of the dictionary most definitely impacts finding
-    and inserting strings.  The dictionary stores <a href="#strings">strings</a>
-    represented as a code word prefix and a byte suffix.</p>
-
-    <p>Initially, the dictionary will contain one entry for every one character
-    string.  However, the number of strings in the dictionary may grow as the
-    encoding process proceeds.  Fortunately there is an upper bound on the
-    number of strings that may be in the dictionary.  If code words are n bits
-    long, there can only be 2<sup>n</sup> unique code words.</p>
-
-    <p>The only real requirement for an LZW dictionary is that it can store
-    2<sup>n</sup> code word/string pairs.  It seemed natural to use an array of
-    2<sup>n</sup> code word/string entries to me.  I started out with a
-    dictionary  that was an array of 2<sup>n</sup> entries, but as I started
-    playing with the algorithm I realized that all strings 1 byte long are
-    encoded by the value of the byte.  It's much faster to just write out the
-    value of the byte than it is to look them up in the dictionary.  So my
-    implementation uses an array based dictionary only stores up to
-    (2<sup>n</sup> - 256) strings.  Single byte strings were handled without
-    using the dictionary.</p>
-
-    <p>As natural as an array based dictionary seems, it can be really slow to
-    search when the dictionary fills up (see <a href="#searching">below</a>).
-    Recently I have replaced the array based dictionary with a binary tree based
-    dictionary to speed up average search time.  Anybody who has seen a binary
-    tree should be comfortable with my implementation.</p>
-
-    <a name="searching"></a>
-    <h4>Searching for and Inserting Strings in Dictionary</h4>
-    <p>Though being able to store all the code words is the only real dictionary
-    requirement, the ability to perform fast search and insertion operations is
-    also desirable.</p>
-
-    <p>Every time the encoding algorithm reads a byte, it appends it to a string
-    that it is building.  The first thing it does with the string is look for it
-    in the dictionary.  If the string isn't in the dictionary and the dictionary
-    isn't full, the encoding algorithm will insert the string into the
-    dictionary.  There is one dictionary search for each byte in the uncoded
-    data stream, and there will be one insertion for each new code word.</p>
-
-    <p>The simplest way to search an array based dictionary is by brute force,
-    from start to finish.  Similarly the simplest way to insert strings into the
-    dictionary is to start at the beginning and keep looking until an empty
-    location is found.  These simple brute force approaches are O(N), where N is
-    the number of code words (which is O(2<sup>n</sup>) where n is the number of
-    bits in a code word).</p>
-
-    <p>It would really be nice to have something faster without adding much
-    computational overhead.  Others have successfully used hashing to speed up
-    searches and insertions.  The ideal hash function will make searching and
-    insertion O(1) operations.  I haven't come up with that function yet.
-    Rather than being creative I used a simple function to generate a hash
-    key that is used as an initial index into the dictionary.  First I shifted
-    the string's code prefix by 8 bits and <code>OR</code> in it's final
-    character.  That gives me an n + 8 bit number.  I used that number modulo
-    the size of the dictionary to get my initial key.</p>
-
-    <div style="padding-left: 2pc;">
-    <code>
-        key = (codeWord &lt;&lt; 8) | lastCharacter;<br>
-        key = key % dictionarySize;
-    </code>
-    </div>
-
-    <p>The first dictionary index I checked is the value of the key.
-    Unfortunately collisions are possible.  In the case of searching for a
-    match, a collision occurs when there's a string already located in the
-    dictionary position, but it doesn't match the string that we're looking for.
-    My collision resolution was simple, but no more efficient than a brute force
-    source.  I search the next dictionary indices until I've either: found a
-    match, searched the entire dictionary, or found an empty dictionary
-    location.</p>
-
-    <p>If the dictionary is full, the array based algorithm will take O(N)
-    searches to discover that a string is not in the dictionary.  I realized
-    that I could increase the size of the dictionary array, so that it will
-    always include empty entries and stop the search if I arrive at an empty
-    entry, but that just cuts the search time to an average of O(N/2).</p>
-
-    <p>Rather than using a larger array, I chose to use a binary tree.  It takes
-    an average of O(log(N)) searches to discover that a string isn't in the full
-    dictionary.  I'm not making much of an effort to balance my tree, so worst
-    case is still O(N), but I don't think there will be many naturally occurring
-    data streams that produce that result.</p>
-
-    <p>In order to keep the binary tree close to balanced, dictionary entries
-    are ordered using a simple key.  I append the code for the prefix sting to
-    the MS nibble of the new character, then I append the LS nibble to that.</p>
-
-    <div style="padding-left: 2pc;">
-    <code>
-        key = (lastCharacter &amp; 0xF0) &lt;&lt; (codeWordLength)<br>
-        key |= (prefix &lt;&lt; 4);<br>
-        key |= (lastCharacter &amp; 0x0F)
-    </code>
-    </div>
-
-    <p>It's possible that I may have future code release using balanced trees.
-    But that will take motivation and time.</p>
-
-    <p>One nice side effect of these methods are that they don't require any
-    additional work to find an insertion location for a new string.  Strings are
-    only inserted into the dictionary when a match isn't found and there is
-    room to insert the string.  If the array based search algorithm ends because
-    it found an empty dictionary location, there wasn't a match and the
-    dictionary isn't full.  The new string and its new code word is inserted
-    into the empty dictionary location where the search algorithm stopped.  In
-    the case of the tree based search, when it ends without a match, the new
-    entry is inserted as the child of the leaf where the search ended.</p>
-
-    <h5>Idea for Super-fast Search/Insertion</h5>
-    <p>The whole dictionary search and insertion process may be trivialized by
-    increasing the size of the dictionary so that it has one index for every
-    possible code word prefix/byte suffix string.  If code words are n bits
-    long, then there are 2<sup>n + 8</sup> different possible strings; no more
-    than 2<sup>n</sup> of which will actually be used.  The dictionary can then
-    be implemented as a 2<sup>n + 8</sup> array, where each entry is either
-    empty or contains the code word for the code word prefix/byte suffix pair
-    represented by that index.</p>
-
-    <h3>Decoding Issues</h3>
-    <p>The biggest considerations when implementing the LZW decoding algorithm
-    are:</p>
-    <ul>
-        <li>Reading of code words that aren't an integral number of bytes.
-        <li>Determining the length of a code word.
-        <li>The layout of the dictionary.
-        <li>Decoding code words to strings.
-    </ul>
-
-    <p>As with writing code words, reading code words wasn't that big of a deal.
-    I use my <a href="./bitfile.html">bit file library</a> here too.</p>
-
-    <a name="cw_length_decode"></a>
-    <h4>Determining Code Word Length</h4>
-    <p>The problem of determining the length of code words is only an issue when
-    variable length code words are allowed.  In the section on
-    <a href="#cw_length_encode">encoding</a>, I discuss a method that uses an
-    all ones indicator when code word bit lengths are to increase by one.  When
-    my decoder reads a code word that is all ones bits, it must increase the
-    code word length by one bit without decoding that code word.  All code words
-    that follow are read using the new length and operation proceeds normally.
+    <p class="section">Parameters:</p>
+    <p class="indent">
+        <code>fpIn</code>
+        - The file stream to be encoded.  It must opened.  NULL pointers
+        will return an error.<br>
+        <code>fpOut</code>
+        - The file stream receiving the encoded results.  It must be opened.
+        NULL pointers will return an error.
     </p>
 
-    <p>Version 0.2 of my implementation starts out using 9 bit code words and
-    allows the code word length to grow to 15 bits.</p>
+    <p class="section">Effects:</p>
+    <p class="indent">
+        <code>fpIn</code> is encoded using the LZW algorithm with codes
+        up to <code>CODE_LEN</code> long and written to <code>fpOut</code>.
+        Neither file is closed after exit.
+    </p>
 
-    <h4>Dictionary Layout</h4>
-    <p>The dictionary organization used for encoding would work just fine for
-    decoding, however it's more complicated then it needs to be.  During the
-    encoding process strings are created and the dictionary is searched to see
-    if code words already exits for that string.  The decoding algorithm reads
-    the encoded stream 1 code word at a time and uses the dictionary to find out
-    how to decode a code word.  Simply restated, encoding searches the
-    dictionary based on string value.  Decoding searches the dictionary based on
-    code word value.</p>
+    <p class="section">Returned:</p>
+    <p class="indent">
+        0 for success, -1 for failure.  <code>errno</code> will be set in
+        the event of a failure.
+    </p>
 
-    <p>My decoding dictionary is just an array of 2<sup>n</sup>
-    <a href="#strings">strings</a> where the array index is the code word that
-    encodes the string.</p>
+    <h3>Decoding Data</h3>
+    <h4>LZWDecodeFile</h4>
+    <p class="section">Declaration:</p>
+    <p class="indent">
+        <code>int LZWDecodeFile(FILE *fpIn, FILE *fpOut);</code>
+    </p>
 
-    <h4>Decoding Code Words into Strings</h4>
-    <p>After it reads a code word, the decoding algorithm will look up the code
-    word in the dictionary and write out the encoded string that it encodes.
-    Normally that wouldn't be an issue.  However, strings in the dictionary are
-    stored as a prefix code word + a suffix byte.  In order to decode a code
-    word into a string of bytes, the prefix code of the string must also be
-    decoded.  The process of decoding prefix strings continues until a prefix
-    string decodes to a 1 byte string.  The process of decoding strings builds
-    the string being decoded in reverse order.</p>
+    <p class="section">Description:</p>
+    <p class="indent">
+        This routine reads an input file one encoded string at a time and
+        decodes it using the LZW algorithm.
+    </p>
 
-    <p>The processes of decoding code words into another code word and a byte
-    and writing all the bytes out in the reverse order of their decoding made me
-    think of recursion.  I don't have much of an opportunity to use recursion in
-    my paying job, so the idea of implementing a recursive decode routine seemed
-    &quot;fun&quot;.  If you'd rather avoid recursion, store the decoded
-    characters into an array that is at least 2<sup>n</sup> - 256 bytes long,
-    then write out the results in reverse order.</p>
+    <p class="section">Parameters:</p>
+    <p class="indent">
+        <code>fpIn</code>
+        - The file stream to be decoded.  It must opened.  NULL pointers
+        will return an error.<br>
+        <code>fpOut</code>
+        - The file stream receiving the decoded results.  It must be opened.
+        NULL pointers will return an error.
+    </p>
 
-    <hr style="width:100%;">
+    <p class="section">Effects:</p>
+    <p class="indent">
+        <code>fpIn</code> is decoded using the LZW algorithm with codes
+        up to <code>CODE_LEN</code> long and written to <code>fpOut</code>.
+        Neither file is closed after exit.
+    </p>
 
-    <h2>Further Information</h2>
-    <p>I found Mark Nelson's Dr. Dobb's Journal
-    <a href="http://marknelson.us/1989/10/01/lzw-data-compression/">
-    article</a> be very helpful.  He even provides source for a slightly
-    different implementation.</p>
+    <p class="section">Returned:</p>
+    <p class="indent">
+        0 for success, -1 for failure.  <code>errno</code> will be set in
+        the event of a failure.
+    </p>
+</div><!-- ends api-->
 
-    <hr style="width:100%;">
+<hr style="width:100%;">
 
-    <h2>C Library Code Interface</h2>
-    <div id="api">
-        <h3>Encoding Data</h3>
-        <h4>LZWEncodeFile</h4>
-        <p class="section">Declaration:</p>
-        <p class="indent">
-            <code>int LZWEncodeFile(FILE *fpIn, FILE *fpOut);</code>
-        </p>
+<h2 id="download">Actual Software</h2>
+<p>I am releasing my implementations of the LZW algorithm under the
+<a href="https://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
+If you've actually read this page to get all the way down here, you
+already know that I have different implementations.  As I add
+enhancements or fix bugs, they will be pushed to my source repository,
+which is hosted on
+<a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
+the latest revision if you're not looking for something specific.</p>
 
-        <p class="section">Description:</p>
-        <p class="indent">
-            This routine reads an input file one character at a time and writes
-            out an LZW encoded version of that file.
-        </p>
+<table class="repotable">
+  <tr>
+    <th>Repository Location</th>
+    <th>
+      <a href="https://github.com/michaeldipperstein/lzw">
+        https://github.com/michaeldipperstein/lzw
+      </a>
+    </th>
+  </tr>
+</table>
 
-        <p class="section">Parameters:</p>
-        <p class="indent">
-            <code>fpIn</code>
-            - The file stream to be encoded.  It must opened.  NULL pointers
-            will return an error.<br>
-            <code>fpOut</code>
-            - The file stream receiving the encoded results.  It must be opened.
-            NULL pointers will return an error.
-        </p>
+<h3 id="portability">Portability</h3>
+<p>All the source code that I have provided is written in strict ANSI
+C.  I would expect it to build correctly on any machine with an ANSI C
+compiler.  I have tested the code compiled with gcc on Linux and
+mingw on Windows XP.</p>
 
-        <p class="section">Effects:</p>
-        <p class="indent">
-            <code>fpIn</code> is encoded using the LZW algorithm with codes
-            up to <code>CODE_LEN</code> long and written to <code>fpOut</code>.
-            Neither file is closed after exit.
-        </p>
+<p>The software makes no assumptions about the endianess of the machine
+that it is executing on.  However, it does make some assumptions about
+the size of data types.  The software makes use of the #if and #error
+pre-processor directives as an attempt to check for violations of my
+assumptions at compile time.</p>
 
-        <p class="section">Returned:</p>
-        <p class="indent">
-            0 for success, -1 for failure.  <code>errno</code> will be set in
-            the event of a failure.
-        </p>
+<p>If you have any further questions or comments, you may contact me by
+e-mail.  My e-mail address is:
+<a href="mailto:mdipperstein@gmail.com">mdipperstein@gmail.com</a></p>
 
-        <h3>Decoding Data</h3>
-        <h4>LZWDecodeFile</h4>
-        <p class="section">Declaration:</p>
-        <p class="indent">
-            <code>int LZWDecodeFile(FILE *fpIn, FILE *fpOut);</code>
-        </p>
-
-        <p class="section">Description:</p>
-        <p class="indent">
-            This routine reads an input file one encoded string at a time and
-            decodes it using the LZW algorithm.
-        </p>
-
-        <p class="section">Parameters:</p>
-        <p class="indent">
-            <code>fpIn</code>
-            - The file stream to be decoded.  It must opened.  NULL pointers
-            will return an error.<br>
-            <code>fpOut</code>
-            - The file stream receiving the decoded results.  It must be opened.
-            NULL pointers will return an error.
-        </p>
-
-        <p class="section">Effects:</p>
-        <p class="indent">
-            <code>fpIn</code> is decoded using the LZW algorithm with codes
-            up to <code>CODE_LEN</code> long and written to <code>fpOut</code>.
-            Neither file is closed after exit.
-        </p>
-
-        <p class="section">Returned:</p>
-        <p class="indent">
-            0 for success, -1 for failure.  <code>errno</code> will be set in
-            the event of a failure.
-        </p>
-    </div><!-- ends api-->
-
-    <hr style="width:100%;">
-
-    <a name="download"></a>
-    <h2>Actual Software</h2>
-    <p>I am releasing my implementations of the LZW algorithm under the
-    <a href="https://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
-    If you've actually read this page to get all the way down here, you
-    already know that I have different implementations.  As I add
-    enhancements or fix bugs, they will be pushed to my source repository,
-    which is hosted on
-    <a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
-    the latest revision if you're not looking for something specific.</p>
-
-    <table summary="GitHub Repositories">
-      <tr>
-        <th valign="top" align="left">Repository Location</th>
-        <th valign="top" align="left">
-          <a href="https://github.com/michaeldipperstein/lzw">
-            https://github.com/michaeldipperstein/lzw
-          </a>
-        </th>
-      </tr>
-    </table>
-
-    <a name="portability"></a>
-    <h3>Portability</h3>
-    <p>All the source code that I have provided is written in strict ANSI
-    C.  I would expect it to build correctly on any machine with an ANSI C
-    compiler.  I have tested the code compiled with gcc on Linux and
-    mingw on Windows XP.</p>
-
-    <p>The software makes no assumptions about the endianess of the machine
-    that it is executing on.  However, it does make some assumptions about
-    the size of data types.  The software makes use of the #if and #error
-    pre-processor directives as an attempt to check for violations of my
-    assumptions at compile time.</p>
-
-    <p>If you have any further questions or comments, you may contact me by
-    e-mail.  My e-mail address is:
-    <a href="mailto:mdipperstein@gmail.com">mdipperstein@gmail.com</a></p>
-
-</div><!-- ends main-->
-
-</div><!--container1-->
-</div><!--container2-->
-
-<p><a href="./index.html">Home</a><br>
-Last updated on <em>August 2, 2017</em></p>
+<a href="index.html">Home</a>
+<p>Last updated on <em>December 29, 2018</em></p>
 
 </body>
 </html>

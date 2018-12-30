@@ -1,734 +1,706 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-"http://www.w3.org/TR/html4/strict.dtd">
-
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <title>LZSS (LZ77) Discussion and Implementation</title>
-<meta http-equiv="content-type" content="text/html; charset=utf-8">
-<meta name="generator" content="quanta">
+<meta charset="UTF-8">
+<meta name="author" content="Michael Dipperstein">
 <meta name="keywords" content="LZSS LZ77 Lempel Ziv Code Compression">
-<link rel="stylesheet" href="./twocol.css" type="text/css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="newlook.css" type="text/css">
 </head>
-
 <body>
 
-<div id="container2">
-<div id="container1">
+<div class="navbar">
+    <a href="./index.html">Home</a>
 
-<div id="navbar">
-    <h1>Project Index</h1>
-    <hr style="width:90%;text-align: center;">
-
-    <p><a href="./index.html">Home</a></p>
-
-    <h2>Compression</h2>
-    <p><a href="./arithmetic.html">Arithmetic Coding</a><br>
-    <a href="./bwt.html">Burrows-Wheeler Transform</a><br>
-    <a href="./delta.html">Delta Coding</a><br>
-    <a href="./freq.html">Frequency Substitution</a><br>
-    <a href="./huffman.html">Huffman Coding</a><br>
-    <a href="./lzss.html">LZSS Coding</a><br>
-    <a href="./lzw.html">LZW Coding</a><br>
-    <a href="./rice.html">Rice (Golomb) Coding</a><br>
-    <a href="./rle.html">Run Length Encoding</a></p>
-
-    <h2>Misc. Programming</h2>
-    <p><a href="./projects.html">School Projects</a><br>
-    <a href="./mltp.html">Thesis Project</a><br>
-    <a href="./crypt.html">crypt(3) Source</a><br>
-    <a href="./hamming.html">Hamming Codes</a><br>
-    <a href="./bitarray.html">Bit Array Libraries</a><br>
-    <a href="./bitfile.html">Bit File Stream Libraries</a><br>
-    <a href="./sqrt.html">Square Root Approximation Library</a><br>
-    <a href="./sort.html">Sort Library</a><br>
-    <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a><br>
-    <a href="./optlist.html">Command Line Option Parser</a><br>
-    <a href="./stopwatch.html">POSIX Stopwatch Library</a><br>
-    <a href="./keypress.html">POSIX Wait for Key Press</a><br>
-    <a href="./ezini.html">INI File Parser and Creator</a><br>
-    <a href="./sockets.html">Berkeley Sockets Examples</a></p>
-
-    <hr style="width:90%;text-align: center;">
-
-    <h1>Obligatory Links</h1>
-    <a href="http://counter.li.org/">
-        <img src="./img/userno.png" alt="Linux User Number" style="border:0px"
-        width="125" height="72">
-    </a><br>
-
-    <a href="https://validator.w3.org/check?uri=referer">
-        <img src="https://www.w3.org/Icons/valid-html401"
-        alt="Valid HTML 4.01 Strict" height="31" width="88">
-    </a>
-</div><!-- ends navbar-->
-
-<div id="main">
-    <div id="header">
-        <h1>LZSS (LZ77) Discussion and Implementation</h1>
-        <h3>by Michael Dipperstein</h3>
+    <div class="dropdown">
+        <button class="dropbutton">Compression</button>
+        <div class="dropdown-items">
+            <a href="./arithmetic.html">Arithmetic Coding</a>
+            <a href="./bwt.html">Burrows-Wheeler Transform</a>
+            <a href="./delta.html">Delta Coding</a>
+            <a href="./freq.html">Frequency Substitution</a>
+            <a href="./huffman.html">Huffman Coding</a>
+            <a href="./lzss.html">LZSS Coding</a>
+            <a href="./lzw.html">LZW Coding</a>
+            <a href="./rice.html">Rice (Golomb) Coding</a>
+            <a href="./rle.html">Run Length Encoding</a>
+        </div>
     </div>
 
-    <hr style="width:100%;">
+    <div class="dropdown">
+        <button class="dropbutton">Misc. Programming</button>
+        <div class="dropdown-items">
+            <a href="./projects.html">School Projects</a>
+            <a href="./mltp.html">Thesis Project</a>
+            <a href="./crypt.html">crypt(3) Source</a>
+            <a href="./hamming.html">Hamming Codes</a>
+            <a href="./bitarray.html">Bit Array Libraries</a>
+            <a href="./bitfile.html">Bit File Stream Libraries</a>
+            <a href="./sqrt.html">Square Root Approximation Library</a>
+            <a href="./sort.html">Sort Library</a>
+            <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a>
+            <a href="./optlist.html">Command Line Option Parser</a>
+            <a href="./stopwatch.html">POSIX Stopwatch Library</a>
+            <a href="./keypress.html">POSIX Wait for Key Press</a>
+            <a href="./ezini.html">INI File Parser and Creator</a>
+            <a href="./sockets.html">Berkeley Sockets Examples</a>
+        </div>
+    </div>
+</div><!-- ends navbar-->
 
-    <p>The saga continues.  As with everything else that I've written, my LZSS
-    implementation left (and still leaves) room for improvement.  This web page
-    attempts to discuss my implementation and the updates that have sporadically
-    taken place since my original LZSS release.</p>
+<div id="header">
+    <h1>LZSS (LZ77) Discussion and Implementation</h1>
+    <h3>by Michael Dipperstein</h3>
+</div>
 
-    <p>I also toyed with an in-memory implementation of the LZSS algorithm
-    that preforms all encode and decode operations on arrays rather than files.
-    This implementation might be useful to those developing on systems that do
-    not include a file system.</p>
+<hr style="width:100%;">
 
-    <p>Information on downloading the source code for all of my LZSS
-    implementations may be found <a href="#download">here</a>.</p>
+<p>The saga continues.  As with everything else that I've written, my LZSS
+implementation left (and still leaves) room for improvement.  This web page
+attempts to discuss my implementation and the updates that have sporadically
+taken place since my original LZSS release.</p>
 
-    <p>As with my <a href="./huffman.html">Huffman</a> code
-    implementation, my intent is to publish an easy to follow ANSI C
-    implementation of the LZSS compression algorithm.  Anyone familiar with
-    ANSI C and the LZSS algorithm should be able to follow and learn from my
-    implementation.</p>
+<p>I also toyed with an in-memory implementation of the LZSS algorithm
+that preforms all encode and decode operations on arrays rather than files.
+This implementation might be useful to those developing on systems that do
+not include a file system.</p>
 
-    <p>The rest of this page discusses the results of my efforts so far.</p>
+<p>Information on downloading the source code for all of my LZSS
+implementations may be found <a href="#download">here</a>.</p>
 
-    <hr style="width:100%;">
+<p>As with my <a href="./huffman.html">Huffman</a> code
+implementation, my intent is to publish an easy to follow ANSI C
+implementation of the LZSS compression algorithm.  Anyone familiar with
+ANSI C and the LZSS algorithm should be able to follow and learn from my
+implementation.</p>
 
-    <h2>Algorithm Overview</h2>
-    <p>LZSS is a dictionary encoding technique.  Unlike Huffman coding, which
-    attempts to reduce the average amount of bits required to represent a
-    symbol, LZSS attempts to replace a string of symbols with a reference to a
-    dictionary location for the same string.  It is intended that the dictionary
-    reference should be shorter than the string it replaces.  In the case of
-    LZ77, the predecessor to LZSS, that wasn't always the case.</p>
+<p>The rest of this page discusses the results of my efforts so far.</p>
 
-    <a name="encoding"></a>
-    <h3>Encoding</h3>
-    <p>The LZSS algorithm and it's predecessor LZ77 attempt to compress series
-    of strings by converting the strings into a dictionary offset and string
-    length.  So if the string &quot;abcd&quot; appeared in the dictionary at
-    position 1234, it may be encoded as {offset = 1234, length = 4}.</p>
+<hr style="width:100%;">
 
-    <p>Okay, so where does the dictionary come from, and why can't I find my
-    whole file in it?</p>
+<h2>Algorithm Overview</h2>
+<p>LZSS is a dictionary encoding technique.  Unlike Huffman coding, which
+attempts to reduce the average amount of bits required to represent a
+symbol, LZSS attempts to replace a string of symbols with a reference to a
+dictionary location for the same string.  It is intended that the dictionary
+reference should be shorter than the string it replaces.  In the case of
+LZ77, the predecessor to LZSS, that wasn't always the case.</p>
 
-    <h4>The Dictionary</h4>
-    <p>The LZSS and LZ77 dictionary is not an external dictionary that lists all
-    known symbol strings.  Instead, the dictionary is a sliding window
-    containing the last <em>N</em> symbols encoded/decoded.  The larger
-    <em>N</em>, the longer it takes to search the whole dictionary for a match
-    and the more bits will be required to store the offset into the dictionary.
-    Typically dictionaries contain an amount of symbols that can be represented
-    by a whole power of 2.  A 432 symbol dictionary would require 9 bits to
-    represent all possible offsets.  If you need to use 9 bits, you might as
-    well have a 512 symbol dictionary so that you can have more entries.</p>
+<h3 id="encoding">Encoding</h3>
+<p>The LZSS algorithm and it's predecessor LZ77 attempt to compress series
+of strings by converting the strings into a dictionary offset and string
+length.  So if the string &quot;abcd&quot; appeared in the dictionary at
+position 1234, it may be encoded as {offset = 1234, length = 4}.</p>
 
-    <p>Since dictionaries are sliding windows, once the
-    (<em>N</em> + 1)<sup>th</sup> symbol is processed and added to the
-    dictionary, the first symbol is removed.  Additional new symbols cause an
-    equal number of the oldest symbols to slide out.</p>
+<p>Okay, so where does the dictionary come from, and why can't I find my
+whole file in it?</p>
 
-    <p>In the example above, after encoding &quot;abcd&quot; as {offset = 1234,
-    length = 4}, the sliding window would shift over 4 characters and the first
-    4 symbols (offsets 0 .. 3) would slide off the front of the sliding window.
-    &quot;a&quot;, &quot;b&quot;, &quot;c&quot;, and &quot;d&quot; would then
-    be entered the dictionary into positions (<em>N</em> - 4), (<em>N</em> - 3),
-    (<em>N</em> - 2), and (<em>N</em> - 1).</p>
+<h4>The Dictionary</h4>
+<p>The LZSS and LZ77 dictionary is not an external dictionary that lists all
+known symbol strings.  Instead, the dictionary is a sliding window
+containing the last <em>N</em> symbols encoded/decoded.  The larger
+<em>N</em>, the longer it takes to search the whole dictionary for a match
+and the more bits will be required to store the offset into the dictionary.
+Typically dictionaries contain an amount of symbols that can be represented
+by a whole power of 2.  A 432 symbol dictionary would require 9 bits to
+represent all possible offsets.  If you need to use 9 bits, you might as
+well have a 512 symbol dictionary so that you can have more entries.</p>
 
-    <h4>Representing Strings</h4>
-    <p>As stated above, encoded strings are represented as an offset and a
-    length.  Since the dictionary size is fixed at <em>N</em> the largest offset
-    may be (<em>N</em> - 1), and the longest string matching a series of
-    characters in the dictionary may be <em>N</em> characters.  If we plan to
-    store these values, that would require 2 * ceil(log<sub>2</sub>(<em>N</em>))
-    bits to represent such a string.  For large <em>N</em>, it's highly unlikely
-    that you'll ever read an <em>N</em> symbol string that matches the contents
-    of dictionary, so the maximum allowed match length is often limited.</p>
+<p>Since dictionaries are sliding windows, once the
+(<em>N</em> + 1)<sup>th</sup> symbol is processed and added to the
+dictionary, the first symbol is removed.  Additional new symbols cause an
+equal number of the oldest symbols to slide out.</p>
 
-    <p>In the examples I have seen, <em>N</em> is typically 4096 or 8192 and the
-    maximum length allowed for matching strings is typically between 10 and 20
-    characters.</p>
+<p>In the example above, after encoding &quot;abcd&quot; as {offset = 1234,
+length = 4}, the sliding window would shift over 4 characters and the first
+4 symbols (offsets 0 .. 3) would slide off the front of the sliding window.
+&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, and &quot;d&quot; would then
+be entered the dictionary into positions (<em>N</em> - 4), (<em>N</em> - 3),
+(<em>N</em> - 2), and (<em>N</em> - 1).</p>
 
-    <h4>LZ77 vs. LZSS</h4>
-    <p>In their original LZ77 algorithm, Lempel and Ziv proposed that all
-    strings be encoded as a length and offset, even strings with no match.
-    Storer and Szymanski observed that individual unmatched symbols or matched
-    strings of one or two symbols take up more space to encode than they do to
-    leave uncoded.</p>
+<h4>Representing Strings</h4>
+<p>As stated above, encoded strings are represented as an offset and a
+length.  Since the dictionary size is fixed at <em>N</em> the largest offset
+may be (<em>N</em> - 1), and the longest string matching a series of
+characters in the dictionary may be <em>N</em> characters.  If we plan to
+store these values, that would require 2 * ceil(log<sub>2</sub>(<em>N</em>))
+bits to represent such a string.  For large <em>N</em>, it's highly unlikely
+that you'll ever read an <em>N</em> symbol string that matches the contents
+of dictionary, so the maximum allowed match length is often limited.</p>
 
-    <p>For example, encoding a string from a dictionary of 4096 symbols, and
-    allowing for matches of up to 15 symbols, will require 16 bits to store an
-    offset and a length.  A single character is only 8 bits.  Using this method,
-    encoding a single character doubles the required storage.</p>
+<p>In the examples I have seen, <em>N</em> is typically 4096 or 8192 and the
+maximum length allowed for matching strings is typically between 10 and 20
+characters.</p>
 
-    <p>Storer and Szymanski proposed preceding each symbol a with coded/uncoded
-    flag.  Using the above example it now takes 9 bits for each uncoded symbol
-    and 17 bits for each encoded string.</p>
+<h4>LZ77 vs. LZSS</h4>
+<p>In their original LZ77 algorithm, Lempel and Ziv proposed that all
+strings be encoded as a length and offset, even strings with no match.
+Storer and Szymanski observed that individual unmatched symbols or matched
+strings of one or two symbols take up more space to encode than they do to
+leave uncoded.</p>
 
-    <p>Storer and Szymanski also observed that if you're not encoding strings of
-    length 0 to <em>M</em>, then <em>M</em> may be used as an offset to the
-    length of the match.  Applying their observation, instead of using 4 bits to
-    represent match lengths of 0 to 15, the same 4 bits may be used to represent
-    match lengths of <em>M</em> to (15 + <em>M</em>).</p>
+<p>For example, encoding a string from a dictionary of 4096 symbols, and
+allowing for matches of up to 15 symbols, will require 16 bits to store an
+offset and a length.  A single character is only 8 bits.  Using this method,
+encoding a single character doubles the required storage.</p>
 
-    <h4>Putting it All Together</h4>
-    <p style="margin-bottom: 0%;">Based on the discussion above, encoding input
-    requires the following steps:<br>
+<p>Storer and Szymanski proposed preceding each symbol a with coded/uncoded
+flag.  Using the above example it now takes 9 bits for each uncoded symbol
+and 17 bits for each encoded string.</p>
 
-    <strong>Step 1.</strong> Initialize the dictionary to a known value.<br>
-    <strong>Step 2.</strong> Read an uncoded string that is the length of the
-    maximum allowable match.<br>
-    <strong>Step 3.</strong> Search for the longest matching string in the
-    dictionary.<br>
-    <strong>Step 4.</strong> If a match is found greater than or equal to the
-    minimum allowable match length:</p>
-    <ol style="list-style-type: upper-alpha; margin-top: 0%; margin-bottom: 0%; padding-left: 4pc;">
-        <li>Write the encoded flag, then the offset and length to the encoded
-        output.
-        <li>Otherwise, write the uncoded flag and the first uncoded symbol to
-        the encoded output.
-    </ol>
-    <p style="margin-top: 0%;">
-    <strong>Step 5.</strong> Shift a copy of the symbols written to the encoded
-    output from the unencoded string to the dictionary.<br>
-    <strong>Step 6.</strong> Read a number of symbols from the uncoded input
-    equal to the number of symbols written in Step 4.<br>
-    <strong>Step 7.</strong> Repeat from Step 3, until all the entire input has
-    been encoded.</p>
+<p>Storer and Szymanski also observed that if you're not encoding strings of
+length 0 to <em>M</em>, then <em>M</em> may be used as an offset to the
+length of the match.  Applying their observation, instead of using 4 bits to
+represent match lengths of 0 to 15, the same 4 bits may be used to represent
+match lengths of <em>M</em> to (15 + <em>M</em>).</p>
 
-    <a name="decoding"></a>
-    <h3>Decoding Strings</h3>
-    <p>The LZSS decoding process is less resource intensive than the LZSS
-    <a href="#encoding">encoding</a> process.  The encoding process requires
-    that a the dictionary is searched for matches to the string to be encoding.
-    Decoding an offset and length combination only requires going to a
-    dictionary offset and copying the specified number of symbols.  No searching
-    is required.</p>
+<h4>Putting it All Together</h4>
+<p style="margin-bottom: 0%;">Based on the discussion above, encoding input
+requires the following steps:<br>
 
-    <p style="margin-bottom: 0%;">Decoding input requires the following steps:
-    <br>
-    <strong>Step 1.</strong> Initialize the dictionary to a known value.<br>
-    <strong>Step 2.</strong> Read the encoded/not encoded flag.<br>
-    <strong>Step 3.</strong> If the flag indicates an encoded string:</p>
-    <ol style="list-style-type: upper-alpha; margin-top: 0%; margin-bottom: 0%; padding-left: 4pc;">
-        <li>Read the encoded length and offset, then copy the specified number
-        of symbols from the dictionary to the decoded output.
-        <li>Otherwise, read the next character and write it to the decoded
-        output.
-    </ol>
-    <p style="margin-top: 0%;">
-    <strong>Step 4.</strong> Shift a copy of the symbols written to the decoded
-    output into the dictionary.<br>
-    <strong>Step 5.</strong> Repeat from Step 2, until all the entire input has
-    been decoded.</p>
+<strong>Step 1.</strong> Initialize the dictionary to a known value.<br>
+<strong>Step 2.</strong> Read an uncoded string that is the length of the
+maximum allowable match.<br>
+<strong>Step 3.</strong> Search for the longest matching string in the
+dictionary.<br>
+<strong>Step 4.</strong> If a match is found greater than or equal to the
+minimum allowable match length:</p>
+<ol style="list-style-type: upper-alpha; margin-top: 0%; margin-bottom: 0%; padding-left: 4pc;">
+    <li>Write the encoded flag, then the offset and length to the encoded
+    output.
+    <li>Otherwise, write the uncoded flag and the first uncoded symbol to
+    the encoded output.
+</ol>
+<p style="margin-top: 0%;">
+<strong>Step 5.</strong> Shift a copy of the symbols written to the encoded
+output from the unencoded string to the dictionary.<br>
+<strong>Step 6.</strong> Read a number of symbols from the uncoded input
+equal to the number of symbols written in Step 4.<br>
+<strong>Step 7.</strong> Repeat from Step 3, until all the entire input has
+been encoded.</p>
 
-    <hr style="width:100%;">
+<h3 id="decoding">Decoding Strings</h3>
+<p>The LZSS decoding process is less resource intensive than the LZSS
+<a href="#encoding">encoding</a> process.  The encoding process requires
+that a the dictionary is searched for matches to the string to be encoding.
+Decoding an offset and length combination only requires going to a
+dictionary offset and copying the specified number of symbols.  No searching
+is required.</p>
 
-    <h2>Implementation Issues</h2>
-    <p>When I set out to implement LZSS, I had the following goals in mind:</p>
-    <ul>
-        <li>The code should be easy to follow, easy to debug, and easy to
-        modify.
-        <li>Encoded strings should not be longer than two bytes (16 bits).
-        16 bit values are easy to deal with and keep encoded strings small.
-        <li>Avoid reading/writing individual bits.
-    </ul>
+<p style="margin-bottom: 0%;">Decoding input requires the following steps:
+<br>
+<strong>Step 1.</strong> Initialize the dictionary to a known value.<br>
+<strong>Step 2.</strong> Read the encoded/not encoded flag.<br>
+<strong>Step 3.</strong> If the flag indicates an encoded string:</p>
+<ol style="list-style-type: upper-alpha; margin-top: 0%; margin-bottom: 0%; padding-left: 4pc;">
+    <li>Read the encoded length and offset, then copy the specified number
+    of symbols from the dictionary to the decoded output.
+    <li>Otherwise, read the next character and write it to the decoded
+    output.
+</ol>
+<p style="margin-top: 0%;">
+<strong>Step 4.</strong> Shift a copy of the symbols written to the decoded
+output into the dictionary.<br>
+<strong>Step 5.</strong> Repeat from Step 2, until all the entire input has
+been decoded.</p>
 
-    <p>My version 0.2 and later code uses a bitfile library, so reading and
-    writing individual bits isn't a big deal.  All of my versions use codes that
-    are integral bytes, and each of my newer versions are derived from my
-    earlier versions so there is a lot of common design.</p>
+<hr style="width:100%;">
 
-    <p>What follows is a discussion about how these goals were accomplished.</p>
+<h2>Implementation Issues</h2>
+<p>When I set out to implement LZSS, I had the following goals in mind:</p>
+<ul>
+    <li>The code should be easy to follow, easy to debug, and easy to
+    modify.
+    <li>Encoded strings should not be longer than two bytes (16 bits).
+    16 bit values are easy to deal with and keep encoded strings small.
+    <li>Avoid reading/writing individual bits.
+</ul>
 
-    <a name="dictionary"></a>
-    <h3>The Dictionary</h3>
-    <p>The dictionary size directly effects:</p>
-    <ul>
-        <li>The time to search the entire dictionary
-        <li>The size of the encoded offset into the dictionary
-        <li>The likelihood of a string matching one that already exists in the
-        dictionary
-    </ul>
+<p>My version 0.2 and later code uses a bitfile library, so reading and
+writing individual bits isn't a big deal.  All of my versions use codes that
+are integral bytes, and each of my newer versions are derived from my
+earlier versions so there is a lot of common design.</p>
 
-    <p>I chose to implement my dictionary as a 4096 character cyclic buffer
-    (sliding window).  I chose 4096 characters, because others have achieved
-    good results with dictionaries of this size, and I can encode offsets of
-    0 to 4095 in 12 bits.  If I encode the offset and length of a string in a
-    16 bit word, that leaves me with 4 bits for the length.</p>
+<p>What follows is a discussion about how these goals were accomplished.</p>
 
-    <h3>Minimum and Maximum Encoded Length</h3>
-    <p>Keeping the goal of a 16 bit encoded string in mind, and the above
-    requirement for a 12 bit offset, I'm left with 4 bits to encode the string
-    length.  With 4 bits, I can encode lengths of 0 through 15.  However, as
-    Storer and Szymanski observed, it only takes 1 byte to write out characters
-    that match dictionary strings 0 or 1 character long, and 2 bytes to write
-    out characters that match dictionary strings 2 characters long.  Savings of
-    one or more bytes per string doesn't occur unless the string is 3 characters
-    or longer.</p>
+<h3 id="dictionary">The Dictionary</h3>
+<p>The dictionary size directly effects:</p>
+<ul>
+    <li>The time to search the entire dictionary
+    <li>The size of the encoded offset into the dictionary
+    <li>The likelihood of a string matching one that already exists in the
+    dictionary
+</ul>
 
-    <p>By not encoding strings that offer less than one byte of savings, the
-    minimum encoded length is three characters.  Since the minimum encoded
-    length is three, I am able to add three to the 4 bit value stored in the
-    length field, resulting in encoded string lengths of 3 to 18.  So 18 is the
-    maximum string length encoded by this implementation.</p>
+<p>I chose to implement my dictionary as a 4096 character cyclic buffer
+(sliding window).  I chose 4096 characters, because others have achieved
+good results with dictionaries of this size, and I can encode offsets of
+0 to 4095 in 12 bits.  If I encode the offset and length of a string in a
+16 bit word, that leaves me with 4 bits for the length.</p>
 
-    <h3>Encode/Not Encoded Flag</h3>
-    <p>I've been calling my implementation a modified LZSS implementation.  It's
-    modified because of the way my version 0.1 code handled the encoded/not
-    encoded flag.  If I followed the traditional LZSS approach for handling the
-    encoded/not encoded flag, writing an unencoded character would require a 9
-    bit write, 1 for the flag and 8 for the character.  Similarly writing an
-    encoded string would require 17 bits, 1 bit for the flag and 16 bits for the
-    code.</p>
+<h3>Minimum and Maximum Encoded Length</h3>
+<p>Keeping the goal of a 16 bit encoded string in mind, and the above
+requirement for a 12 bit offset, I'm left with 4 bits to encode the string
+length.  With 4 bits, I can encode lengths of 0 through 15.  However, as
+Storer and Szymanski observed, it only takes 1 byte to write out characters
+that match dictionary strings 0 or 1 character long, and 2 bytes to write
+out characters that match dictionary strings 2 characters long.  Savings of
+one or more bytes per string doesn't occur unless the string is 3 characters
+or longer.</p>
 
-    <p>While I was studying the algorithm, I came across some implementations
-    that stored encoded flags in groups of eight followed by the characters or
-    encoded strings that they represent.  I don't know who to credit with the
-    discovery of this technique, but it allowed my version 0.1 implementation to
-    use standard one byte reads and writes instead of one bit reads and writes.
+<p>By not encoding strings that offer less than one byte of savings, the
+minimum encoded length is three characters.  Since the minimum encoded
+length is three, I am able to add three to the 4 bit value stored in the
+length field, resulting in encoded string lengths of 3 to 18.  So 18 is the
+maximum string length encoded by this implementation.</p>
+
+<h3>Encode/Not Encoded Flag</h3>
+<p>I've been calling my implementation a modified LZSS implementation.  It's
+modified because of the way my version 0.1 code handled the encoded/not
+encoded flag.  If I followed the traditional LZSS approach for handling the
+encoded/not encoded flag, writing an unencoded character would require a 9
+bit write, 1 for the flag and 8 for the character.  Similarly writing an
+encoded string would require 17 bits, 1 bit for the flag and 16 bits for the
+code.</p>
+
+<p>While I was studying the algorithm, I came across some implementations
+that stored encoded flags in groups of eight followed by the characters or
+encoded strings that they represent.  I don't know who to credit with the
+discovery of this technique, but it allowed my version 0.1 implementation to
+use standard one byte reads and writes instead of one bit reads and writes.
+</p>
+
+<p>This technique also makes the <strong>EOF</strong> clear.  By processing
+only bytes, there are no spare bits, os the <strong>EOF</strong> of the
+encoded dats is actually the <strong>EOF</strong> of the encoded file.
+Don't worry about it if I lost you on the <strong>EOF</strong> discussion,
+just relax, because there's no need to handle it specially.</p>
+
+<p>After writing my version 0.1 implementation, I wrote a
+<a href="./bitfile.html">bitfile library</a> that handles single and
+multiple bit writes.  My version 0.2 and later code uses the bitfile library
+and handles the encoded/not encoded flag according to the traditional LZSS
+algorithm.</p>
+
+<h3>Finding Matches in the Dictionary</h3>
+<p>As stated above, one of my goals was to provide an LZSS implementation
+that is easy to read and easy to debug.  So, to keep things simple, my first
+implementation used a brute force <a href="#sequential">sequential</a>
+search to match the string to be encoded to strings in the dictionary.
+Through experimentation and reading, I've discovered that the methods used
+for string matching significantly impact encoding time.</p>
+
+<p>Other's have successfully improved the time required to find matching
+strings using the following techniques:</p>
+<ul>
+    <li><a href="#kmp">Knuth-Morris-Pratt</a> linear search optimization
+    <li>Boyer-Moore linear search optimization
+    <li><a href="#linked_list">Linked Lists</a>
+    <li><a href="#hash_table">Hash Tables</a>
+    <li>Multi-Layer Hash Tables
+    <li><a href="#binary_tree">Binary Search Trees</a>
+    <li>Splays
+    <li>Suffix Trees or Suffix Arrays
+</ul>
+
+<p>I have already experimented with some of these techniques and plan to
+experiment with others as time allows.  The rest of this section documents
+some of what I have tried so far.</p>
+
+<h4 id="sequential">Sequential Search</h4>
+<p>The first search I implemented was a sequential search.  I simply
+start at the beginning of the sliding window dictionary and do a
+character by character comparisons with the string being encoded.  If
+the first characters match, I check the characters that follow.  If I
+don't have a match, I move to the next character in the sliding window.
+The source code implementing a sequential search is contained in the
+version 0.1 file <kbd>lzss.c</kbd> and the file <kbd>brute.c</kbd> in
+versions 0.2 and later.  The logic is pretty simple, but may require a
+number of comparisons.  If the string is length <em>m</em> and the
+dictionary is length <em>n</em>, a sequential search will be on the order
+of (<em>n</em>) &times; (<em>m</em>); O(<em>n</em> &times; <em>m</em>).
+</p>
+
+<h4 id="kmp">Knuth-Morris-Pratt (KMP) Optimization</h4>
+<p>The addition of code implementing the KMP algorithm is a
+relatively new one (version 0.6.1).  By the time I got around to
+including it
+<a href="https://en.wikipedia.org/wiki/Knuth-Morris-Pratt_algorithm">
+Wikipedia</a> had a reasonable description as well as pseudocode that
+I could reference.</p>
+
+<p>The KMP algorithm is O(<em>n</em> &times; <em>m</em>), just like the
+brute force <a href="#sequential">sequential search</a>.  However KMP
+attempts to use some information about the string we're attempting to
+find a match for and the comparisons already made in order skip some
+comparisons that must fail.  This skipping makes KMP a &Theta;(<em>m</em>)
+search algorithm.</p>
+
+<p id="kmp_example"><strong>Example:</strong><br>
+<code>dictionary = abcabcabd</code><br>
+<code>string = abcabd</code></p>
+
+<p>The initial pass, will start by comparing <code>string[0]</code> to
+<code>dictionary[0]</code> and fail when it compares
+<code>string[5]</code> to <code>dictionary[5]</code>.</p>
+
+<table style="border-collapse: collapse; border-spacing: 0; padding: 0;">
+    <tr>
+        <td>Dictionary &nbsp;&nbsp;</td>
+        <td style="background-color:lime">a</td>
+        <td style="background-color:lime">b</td>
+        <td style="background-color:lime">c</td>
+        <td style="background-color:lime">a</td>
+        <td style="background-color:lime">b</td>
+        <td style="background-color:red">c</td>
+        <td>a</td>
+        <td>b</td>
+        <td>d</td>
+    </tr>
+    <tr>
+        <td>String</td>
+        <td style="background-color:lime">a</td>
+        <td style="background-color:lime">b</td>
+        <td style="background-color:lime">c</td>
+        <td style="background-color:lime">a</td>
+        <td style="background-color:lime">b</td>
+        <td style="background-color:red">d</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+    </tr>
+</table>
+
+<p>The brute force sequential search will resume by comparing
+<code>string[0]</code> to <code>dictionary[1]</code> but we know this
+will fail because <code>string[1]</code> matches
+<code>dictionary[1]</code> and <code>string[0]</code> and
+<code>string[1]</code> are not the same.</p>
+
+<p>KMP is smart enough to skip ahead and resume by comparing
+<code>string[0]</code> to <code>dictionary[3]</code>, which happens to
+be a match in this example.</p>
+
+<table style="border-collapse: collapse; border-spacing: 0; padding: 0;">
+    <tr>
+        <td>Dictionary &nbsp;&nbsp;</td>
+        <td>a</td>
+        <td>b</td>
+        <td>c</td>
+        <td style="background-color:lime">a</td>
+        <td style="background-color:lime">b</td>
+        <td style="background-color:lime">c</td>
+        <td style="background-color:lime">a</td>
+        <td style="background-color:lime">b</td>
+        <td style="background-color:lime">d</td>
+    </tr>
+    <tr>
+        <td>String</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td style="background-color:lime">a</td>
+        <td style="background-color:lime">b</td>
+        <td style="background-color:lime">c</td>
+        <td style="background-color:lime">a</td>
+        <td style="background-color:lime">b</td>
+        <td style="background-color:lime">d</td>
+    </tr>
+</table>
+
+<p>The KMP algorithm requires that the string being searched for be
+preprocessed.  The preprocessing generates a look-up table used to
+determine how far back from the failed comparison, the algorithm must
+go to resume comparisons.  The look-up table is know as a &quot;partial
+match table&quot; or a &quot;failure function&quot;.  The partial
+match table for our example string is depicted below:</p>
+
+<table class="single-boarder-table">
+    <tr>
+        <td>String</td>
+        <td>a</td>
+        <td>b</td>
+        <td>c</td>
+        <td>a</td>
+        <td>b</td>
+        <td>d</td>
+    </tr>
+    <tr>
+        <td>Partial Match Table &nbsp;&nbsp;</td>
+        <td>-1</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+        <td>1</td>
+        <td>2</td>
+    </tr>
+</table>
+
+<p>When the <a href="#kmp_example">example</a> above failed to match
+<code>string[5]</code> to <code>dictionary[5]</code>, position 5 of the
+partial match table was used to determine that search should fallback 2
+to <code>dictionary[3]</code>.</p>
+
+<p>The source code implementing the KMP algorithm is contained in the
+file <kbd>kmp.c</kbd>.  The majority of the code follows the outline of
+the pseudocode provided by
+<a href="https://en.wikipedia.org/wiki/Knuth-Morris-Pratt_algorithm">
+Wikipedia</a>.</p>
+
+<h4 id="linked_list">Linked Lists</h4>
+<p>The sequential search algorithm moves through the dictionary one
+character at a time, checking for matches to the first character in the
+string to be encoded.  Assuming equal distribution of characters, there's a
+1 in <em>alphabet size</em> chance of characters matching.</p>
+
+<p>One approach to ensuring that the first character of the string being
+encoded matches the dictionary entry it is being compared to is to keep a
+list of all dictionary entries that start with a character for each
+character in the alphabet.  For example, there would be one list of all the
+entries that start with 'A', and another of all the entries that start with
+'B'.  In the case of a 256 character alphabet, 256 lists must be
+maintained.</p>
+
+<p>Since the <a href="#dictionary">dictionary</a> is a sliding window of
+the last characters encoded by the algorithm, the lists of strings starting
+with a given character must be updated as old characters are removed from
+the dictionary and new characters are added to the dictionary.  Linked lists
+are a natural choice for implementing such dynamic lists.</p>
+
+<p>The additional memory overhead required to implement a collection of
+linked lists is one pointer to the head of each of the lists, plus one
+pointer to the next character in the list for each character in the
+dictionary.</p>
+
+<p>If the string is length <em>m</em> and the dictionary is length
+<em>n</em>, it turns out the worst case number of operations for finding a
+match is still of the order O(<em>n</em> &times; <em>m</em>), but the
+average case is of the order of (<em>m</em> &times; <em>n</em>) &divide;
+(<em>alphabet size</em>).</p>
+
+<p>The source code implementing a linked list search is contained in the
+version 0.1 file <code>lzlist.c</code> and the file <code>list.c</code> in
+versions 0.2 and later.  In my implementation, all pointers (list head and
+next) are <code>int</code> indices into the sliding window dictionary.</p>
+
+<h4 id="hash_table">Hash Tables</h4>
+<p>After implementing string matches with <a href="#linked_list">linked
+lists</a>, it seemed like a wasn't much effort to try matching using hash
+tables.  In actuality, the linked lists approach, is a solution involving
+hash tables where the hash key is the first character of the string and
+collisions are stored in a linked list.  If that's all I wanted, I'd be
+done.</p>
+
+<p>One problem with the linked list approach is that all the strings in a
+list only match the first character in the list, but a string will not be
+encoded in {offset, length} format until it matches at least some minimum
+(<em>M</em>) number of characters.  To ensure that only strings matching
+<em>M</em> characters are searched, you can generate a hash key from the
+first <em>M</em> characters of the string.  String matching will fly when
+you do that, however the hash table will need
+(<em>alphabet size</em>)<sup><em>M</em></sup> entries.  For my
+implementation <em>alphabet size</em> is 256 and <em>M</em> is 3, so the
+hash table would need 256<sup>3</sup> entries (that's 16,777,216 for anybody
+without a calculator).  That makes the hash table 4096 times the size of the
+dictionary.</p>
+
+<p>A 16M entry hash table doesn't strike me as a viable solution.  I wanted
+to try much smaller tables.  In order to be able to use smaller tables, I
+needed a key that would distribute <em>M</em> long strings fairly evenly
+through the hash table.  Rather than inventing and testing a new key
+algorithm, I chose the key generation method discussed in K. Sadakane and
+H. Imai:
+<a href="https://pdfs.semanticscholar.org/956d/e955607e92e33151db4216b93e51226f2b87.pdf">
+Improving the Speed of LZ77 Compression by Hashing and Suffix Sorting</a>,
+IEICE Trans. Fundamentals, Vol. E83-A, No. 12, pp. 2689--2798, 2000.
+The key algorithm is supposed to be the same algorithm used by
+<a href="http://www.gzip.org">gzip</a> and may be implemented using the
+following C fragment:</p>
+
+<p><code>
+key = 0;<br>
+for (i = 0; i &lt; (<em>M</em> + 1); i++)<br>
+{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;key = (key &lt;&lt; <em>d</em>) ^ (string[i]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;key %= <em>hash size</em>;<br>
+}<br>
+</code></p>
+
+<p>For my implementation I ended up settling on <em>d</em> = 5 and
+<em>hash size</em> = 1024, though I found that the key distributed strings
+evenly for <em>hash size</em> of a power of 2 between 256 and 131072.</p>
+
+<p>There's only one additional complication.  In the case of linked lists,
+adding or removing a character from the dictionary required that one entry
+be added or removed from a linked list.  When hashing on <em>M</em>
+characters, adding or removing the <em>n</em><sup>th</sup>
+character from the dictionary requires that strings starting at
+(<em>n</em> - <em>M</em> + 1) through <em>n</em> be added to or removed from
+the hash table.</p>
+
+<p>The source code implementing a hash table search is contained in the
+version 0.1 file <code>lzhash.c</code> and the file <code>hash.c</code> in
+version 0.2 and later.  In my implementation, all pointers (hash table and
+next) are <code>int</code> indices into the sliding window dictionary.</p>
+
+<h4 id="binary_tree">Binary Search Trees</h4>
+<p>The sequential search algorithm moves through the
+<a href="#dictionary">dictionary</a> one character at a time, checking
+for matches to the string being encoded.  Any failed match results in
+advancing the compare to the string starting with the next
+character in the dictionary.</p>
+
+<p>A binary search tree is another structure that is added to the
+<a href="#dictionary">dictionary</a> to help speed up the search
+process.  Each string in the dictionary has a corresponding node in the
+binary search tree.  Each node has two pointers, one to a subtree
+containing only nodes with strings less than the current node, and
+the other to a subtree containing only nodes with strings greater than
+the current node.</p>
+
+<p>Unlike the sequential search, when a search fails against a string in
+a node of a binary tree, the next comparison will start with the string
+at the root of the subtree that may contain a match.  If the current
+match failed because a the string being encoded is less than the string
+in the current node, the next string compared will be the
+one in root of the subtree containing all strings less than the
+string in the current node.</p>
+
+<p>If the string is length <em>m</em> and the dictionary is length
+<em>n</em>, it turns out the worst case number of operations for finding a
+match is still of the order O(<em>n</em> &times; <em>m</em>), but the
+average case is O(log(<em>n</em>) &times; <em>m</em>).  The worst case
+occurs when the binary search tree resembles a linked list and each
+node only has one child.</p>
+
+<p>Since the <a href="#dictionary">dictionary</a> is a sliding window of
+the last characters encoded by the algorithm, the binary search tree
+must be updated as old characters are removed from the dictionary and
+new characters are added to the dictionary.
+<a href="https://en.wikipedia.org/wiki/Binary_search_tree">Wikipedia</a>
+provides a description of the algorithm used to insert or remove
+entries from a binary search tree.
+
+<p>The additional memory overhead required to implement a binary search
+tree is one pointer to the root of the tree plus three pointers for each
+symbol in the sliding window dictionary.  The pointers are for each
+node's left child, right child, and parent.</p>
+
+<p>The source code implementing a binary tree search is contained in the
+file <code>tree.c</code>.  In my implementation, all pointers (left, right,
+and parent) are all <code>unsigned int</code> indices into the sliding
+window dictionary.</p>
+
+<hr style="width:100%;">
+
+<h2>C Library Code Interface</h2>
+<div id="api">
+    <h3>Encoding Data</h3>
+    <h4>EncodeLZSS</h4>
+    <p class="section">Declaration:</p>
+    <p class="indent">
+        <code>int EncodeLZSS(FILE *fpIn, FILE *fpOut);</code>
     </p>
 
-    <p>This technique also makes the <strong>EOF</strong> clear.  By processing
-    only bytes, there are no spare bits, os the <strong>EOF</strong> of the
-    encoded dats is actually the <strong>EOF</strong> of the encoded file.
-    Don't worry about it if I lost you on the <strong>EOF</strong> discussion,
-    just relax, because there's no need to handle it specially.</p>
-
-    <p>After writing my version 0.1 implementation, I wrote a
-    <a href="./bitfile.html">bitfile library</a> that handles single and
-    multiple bit writes.  My version 0.2 and later code uses the bitfile library
-    and handles the encoded/not encoded flag according to the traditional LZSS
-    algorithm.</p>
-
-    <h3>Finding Matches in the Dictionary</h3>
-    <p>As stated above, one of my goals was to provide an LZSS implementation
-    that is easy to read and easy to debug.  So, to keep things simple, my first
-    implementation used a brute force <a href="#sequential">sequential</a>
-    search to match the string to be encoded to strings in the dictionary.
-    Through experimentation and reading, I've discovered that the methods used
-    for string matching significantly impact encoding time.</p>
-
-    <p>Other's have successfully improved the time required to find matching
-    strings using the following techniques:</p>
-    <ul>
-        <li><a href="#kmp">Knuth-Morris-Pratt</a> linear search optimization
-        <li>Boyer-Moore linear search optimization
-        <li><a href="#linked_list">Linked Lists</a>
-        <li><a href="#hash_table">Hash Tables</a>
-        <li>Multi-Layer Hash Tables
-        <li><a href="#binary_tree">Binary Search Trees</a>
-        <li>Splays
-        <li>Suffix Trees or Suffix Arrays
-    </ul>
-
-    <p>I have already experimented with some of these techniques and plan to
-    experiment with others as time allows.  The rest of this section documents
-    some of what I have tried so far.</p>
-
-    <a name="sequential"></a>
-    <h4>Sequential Search</h4>
-    <p>The first search I implemented was a sequential search.  I simply
-    start at the beginning of the sliding window dictionary and do a
-    character by character comparisons with the string being encoded.  If
-    the first characters match, I check the characters that follow.  If I
-    don't have a match, I move to the next character in the sliding window.
-    The source code implementing a sequential search is contained in the
-    version 0.1 file <tt>lzss.c</tt> and the file <tt>brute.c</tt> in
-    versions 0.2 and later.  The logic is pretty simple, but may require a
-    number of comparisons.  If the string is length <em>m</em> and the
-    dictionary is length <em>n</em>, a sequential search will be on the order
-    of (<em>n</em>) &times; (<em>m</em>); O(<em>n</em> &times; <em>m</em>).
+    <p class="section">Description:</p>
+    <p class="indent">
+        This function will read an input file and write an output
+        file encoded according to the traditional LZSS algorithm.
+        This algorithm encodes strings as 16 bits (a 12 bit offset
+        + a 4 bit length).
     </p>
 
-    <a name="kmp"></a>
-    <h4>Knuth-Morris-Pratt (KMP) Optimization</h4>
-    <p>The addition of code implementing the KMP algorithm is a
-    relatively new one (version 0.6.1).  By the time I got around to
-    including it
-    <a href="https://en.wikipedia.org/wiki/Knuth-Morris-Pratt_algorithm">
-    Wikipedia</a> had a reasonable description as well as pseudocode that
-    I could reference.</p>
+    <p class="section">Parameters:</p>
+    <p class="indent">
+        <code>fpIn</code>
+        - The file stream to be encoded.  It must opened.  NULL pointers
+        will return an error.<br>
+        <code>fpOut</code>
+        - The file stream receiving the encoded results.  It must be opened.
+        NULL pointers will return an error.
+    </p>
 
-    <p>The KMP algorithm is O(<em>n</em> &times; <em>m</em>), just like the
-    brute force <a href="#sequential">sequential search</a>.  However KMP
-    attempts to use some information about the string we're attempting to
-    find a match for and the comparisons already made in order skip some
-    comparisons that must fail.  This skipping makes KMP a &Theta;(<em>m</em>)
-    search algorithm.</p>
+    <p class="section">Effects:</p>
+    <p class="indent">
+        <code>fpIn</code> is encoded and written to <code>fpOut</code>.
+        Neither file is closed after exit.
+    </p>
 
-    <a name="kmp_example"></a>
-    <p><strong>Example:</strong><br>
-    <code>dictionary = abcabcabd</code><br>
-    <code>string = abcabd</code></p>
+    <p class="section">Returned:</p>
+    <p class="indent">
+        0 for success, -1 for failure.  <code>errno</code> will be set in
+        the event of a failure.
+    </p>
 
-    <p>The initial pass, will start by comparing <code>string[0]</code> to
-    <code>dictionary[0]</code> and fail when it compares
-    <code>string[5]</code> to <code>dictionary[5]</code>.</p>
+    <h3>Decoding Data</h3>
+    <h4>DecodeLZSS</h4>
+    <p class="section">Declaration:</p>
+    <p class="indent">
+        <code>int DecodeLZSS(FILE *fpIn, FILE *fpOut);</code>
+    </p>
 
-    <table cellspacing="0" cellpadding="0" border="0"
-        summary="KMP first compare">
-        <tr>
-            <td>Dictionary &nbsp;&nbsp;</td>
-            <td style="background-color:lime">a</td>
-            <td style="background-color:lime">b</td>
-            <td style="background-color:lime">c</td>
-            <td style="background-color:lime">a</td>
-            <td style="background-color:lime">b</td>
-            <td style="background-color:red">c</td>
-            <td>a</td>
-            <td>b</td>
-            <td>d</td>
-        </tr>
-        <tr>
-            <td>String</td>
-            <td style="background-color:lime">a</td>
-            <td style="background-color:lime">b</td>
-            <td style="background-color:lime">c</td>
-            <td style="background-color:lime">a</td>
-            <td style="background-color:lime">b</td>
-            <td style="background-color:red">d</td>
-        </tr>
-    </table>
+    <p class="section">Description:</p>
+    <p class="indent">
+        This function will read an LZSS encoded input file and write
+        an output file.  This algorithm decodes strings from 16
+        bit code words (a 12 bit offset + a 4 bit length).
+    </p>
 
-    <p>The brute force sequential search will resume by comparing
-    <code>string[0]</code> to <code>dictionary[1]</code> but we know this
-    will fail because <code>string[1]</code> matches
-    <code>dictionary[1]</code> and <code>string[0]</code> and
-    <code>string[1]</code> are not the same.</p>
+    <p class="section">Parameters:</p>
+    <p class="indent">
+        <code>fpIn</code>
+        - The file stream to be decoded.  It must opened.  NULL pointers
+        will return an error.<br>
+        <code>fpOut</code>
+        - The file stream receiving the decoded results.  It must be opened.
+        NULL pointers will return an error.
+    </p>
 
-    <p>KMP is smart enough to skip ahead and resume by comparing
-    <code>string[0]</code> to <code>dictionary[3]</code>, which happens to
-    be a match in this example.</p>
+    <p class="section">Effects:</p>
+    <p class="indent">
+        <code>fpIn</code> is decoded and written to <code>fpOut</code>.
+        Neither file is closed after exit.
+    </p>
 
-    <table cellspacing="0" cellpadding="0" border="0"
-        summary="KMP second compare">
-        <tr>
-            <td>Dictionary &nbsp;&nbsp;</td>
-            <td>a</td>
-            <td>b</td>
-            <td>c</td>
-            <td style="background-color:lime">a</td>
-            <td style="background-color:lime">b</td>
-            <td style="background-color:lime">c</td>
-            <td style="background-color:lime">a</td>
-            <td style="background-color:lime">b</td>
-            <td style="background-color:lime">d</td>
-        </tr>
-        <tr>
-            <td>String</td>
-            <td>&nbsp;</td>
-            <td>&nbsp;</td>
-            <td>&nbsp;</td>
-            <td style="background-color:lime">a</td>
-            <td style="background-color:lime">b</td>
-            <td style="background-color:lime">c</td>
-            <td style="background-color:lime">a</td>
-            <td style="background-color:lime">b</td>
-            <td style="background-color:lime">d</td>
-        </tr>
-    </table>
+    <p class="section">Returned:</p>
+    <p class="indent">
+        0 for success, -1 for failure.  <code>errno</code> will be set in
+        the event of a failure.
+    </p>
+</div><!-- ends api-->
 
-    <p>The KMP algorithm requires that the string being searched for be
-    preprocessed.  The preprocessing generates a look-up table used to
-    determine how far back from the failed comparison, the algorithm must
-    go to resume comparisons.  The look-up table is know as a &quot;partial
-    match table&quot; or a &quot;failure function&quot;.  The partial
-    match table for our example string is depicted below:</p>
+<hr style="width:100%;">
 
-    <table cellspacing="0" cellpadding="0" border="1" summary="KMP match table">
-        <tr>
-            <td>String</td>
-            <td>a</td>
-            <td>b</td>
-            <td>c</td>
-            <td>a</td>
-            <td>b</td>
-            <td>d</td>
-        </tr>
-        <tr>
-            <td>Partial Match Table &nbsp;&nbsp;</td>
-            <td>-1</td>
-            <td>0</td>
-            <td>0</td>
-            <td>0</td>
-            <td>1</td>
-            <td>2</td>
-        </tr>
-    </table>
+<h2 id="download">Actual Software</h2>
+<p>I am releasing my implementations of the LZSS algorithm under the
+<a href="https://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
+If you've actually read this page to get all the way down here, you
+already know that I have different implementations.  In general earlier
+versions are simpler (maybe easier to follow) and later versions are easier
+to use as libraries and better suited for projects taking advantage of the
+LGPL.  In some cases later version add new new search methods or fix minor
+bugs.  All versions of my source code is available on
+<a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
+the latest revision if you're not looking for something specific.</p>
 
-    <p>When the <a href="#kmp_example">example</a> above failed to match
-    <code>string[5]</code> to <code>dictionary[5]</code>, position 5 of the
-    partial match table was used to determine that search should fallback 2
-    to <code>dictionary[3]</code>.</p>
+<table class="repotable">
+  <tr>
+    <th>Repository Location</th>
+    <th>
+      <a href="https://github.com/michaeldipperstein/lzss">
+        https://github.com/michaeldipperstein/lzss
+      </a>
+    </th>
+  </tr>
+</table>
 
-    <p>The source code implementing the KMP algorithm is contained in the
-    file <tt>kmp.c</tt>.  The majority of the code follows the outline of
-    the pseudocode provided by
-    <a href="https://en.wikipedia.org/wiki/Knuth-Morris-Pratt_algorithm">
-    Wikipedia</a>.</p>
+<p>If you have any further questions or comments, you may contact me by
+e-mail.  My e-mail address is:
+<a href="mailto:mdipperstein@gmail.com">mdipperstein@gmail.com</a></p>
 
-    <a name="linked_list"></a>
-    <h4>Linked Lists</h4>
-    <p>The sequential search algorithm moves through the dictionary one
-    character at a time, checking for matches to the first character in the
-    string to be encoded.  Assuming equal distribution of characters, there's a
-    1 in <em>alphabet size</em> chance of characters matching.</p>
-
-    <p>One approach to ensuring that the first character of the string being
-    encoded matches the dictionary entry it is being compared to is to keep a
-    list of all dictionary entries that start with a character for each
-    character in the alphabet.  For example, there would be one list of all the
-    entries that start with 'A', and another of all the entries that start with
-    'B'.  In the case of a 256 character alphabet, 256 lists must be
-    maintained.</p>
-
-    <p>Since the <a href="#dictionary">dictionary</a> is a sliding window of
-    the last characters encoded by the algorithm, the lists of strings starting
-    with a given character must be updated as old characters are removed from
-    the dictionary and new characters are added to the dictionary.  Linked lists
-    are a natural choice for implementing such dynamic lists.</p>
-
-    <p>The additional memory overhead required to implement a collection of
-    linked lists is one pointer to the head of each of the lists, plus one
-    pointer to the next character in the list for each character in the
-    dictionary.</p>
-
-    <p>If the string is length <em>m</em> and the dictionary is length
-    <em>n</em>, it turns out the worst case number of operations for finding a
-    match is still of the order O(<em>n</em> &times; <em>m</em>), but the
-    average case is of the order of (<em>m</em> &times; <em>n</em>) &divide;
-    (<em>alphabet size</em>).</p>
-
-    <p>The source code implementing a linked list search is contained in the
-    version 0.1 file <code>lzlist.c</code> and the file <code>list.c</code> in
-    versions 0.2 and later.  In my implementation, all pointers (list head and
-    next) are <code>int</code> indices into the sliding window dictionary.</p>
-
-    <a name="hash_table"></a>
-    <h4>Hash Tables</h4>
-    <p>After implementing string matches with <a href="#linked_list">linked
-    lists</a>, it seemed like a wasn't much effort to try matching using hash
-    tables.  In actuality, the linked lists approach, is a solution involving
-    hash tables where the hash key is the first character of the string and
-    collisions are stored in a linked list.  If that's all I wanted, I'd be
-    done.</p>
-
-    <p>One problem with the linked list approach is that all the strings in a
-    list only match the first character in the list, but a string will not be
-    encoded in {offset, length} format until it matches at least some minimum
-    (<em>M</em>) number of characters.  To ensure that only strings matching
-    <em>M</em> characters are searched, you can generate a hash key from the
-    first <em>M</em> characters of the string.  String matching will fly when
-    you do that, however the hash table will need
-    (<em>alphabet size</em>)<sup><em>M</em></sup> entries.  For my
-    implementation <em>alphabet size</em> is 256 and <em>M</em> is 3, so the
-    hash table would need 256<sup>3</sup> entries (that's 16,777,216 for anybody
-    without a calculator).  That makes the hash table 4096 times the size of the
-    dictionary.</p>
-
-    <p>A 16M entry hash table doesn't strike me as a viable solution.  I wanted
-    to try much smaller tables.  In order to be able to use smaller tables, I
-    needed a key that would distribute <em>M</em> long strings fairly evenly
-    through the hash table.  Rather than inventing and testing a new key
-    algorithm, I chose the key generation method discussed in K. Sadakane and
-    H. Imai:
-    <a href="https://pdfs.semanticscholar.org/956d/e955607e92e33151db4216b93e51226f2b87.pdf">
-    Improving the Speed of LZ77 Compression by Hashing and Suffix Sorting</a>,
-    IEICE Trans. Fundamentals, Vol. E83-A, No. 12, pp. 2689--2798, 2000.
-    The key algorithm is supposed to be the same algorithm used by
-    <a href="http://www.gzip.org">gzip</a> and may be implemented using the
-    following C fragment:</p>
-
-    <p><code>
-    key = 0;<br>
-    for (i = 0; i &lt; (<em>M</em> + 1); i++)<br>
-    {<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;key = (key &lt;&lt; <em>d</em>) ^ (string[i]);<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;key %= <em>hash size</em>;<br>
-    }<br>
-    </code></p>
-
-    <p>For my implementation I ended up settling on <em>d</em> = 5 and
-    <em>hash size</em> = 1024, though I found that the key distributed strings
-    evenly for <em>hash size</em> of a power of 2 between 256 and 131072.</p>
-
-    <p>There's only one additional complication.  In the case of linked lists,
-    adding or removing a character from the dictionary required that one entry
-    be added or removed from a linked list.  When hashing on <em>M</em>
-    characters, adding or removing the <em>n</em><sup>th</sup>
-    character from the dictionary requires that strings starting at
-    (<em>n</em> - <em>M</em> + 1) through <em>n</em> be added to or removed from
-    the hash table.</p>
-
-    <p>The source code implementing a hash table search is contained in the
-    version 0.1 file <code>lzhash.c</code> and the file <code>hash.c</code> in
-    version 0.2 and later.  In my implementation, all pointers (hash table and
-    next) are <code>int</code> indices into the sliding window dictionary.</p>
-
-    <a name="binary_tree"></a>
-    <h4>Binary Search Trees</h4>
-    <p>The sequential search algorithm moves through the
-    <a href="#dictionary">dictionary</a> one character at a time, checking
-    for matches to the string being encoded.  Any failed match results in
-    advancing the compare to the string starting with the next
-    character in the dictionary.</p>
-
-    <p>A binary search tree is another structure that is added to the
-    <a href="#dictionary">dictionary</a> to help speed up the search
-    process.  Each string in the dictionary has a corresponding node in the
-    binary search tree.  Each node has two pointers, one to a subtree
-    containing only nodes with strings less than the current node, and
-    the other to a subtree containing only nodes with strings greater than
-    the current node.</p>
-
-    <p>Unlike the sequential search, when a search fails against a string in
-    a node of a binary tree, the next comparison will start with the string
-    at the root of the subtree that may contain a match.  If the current
-    match failed because a the string being encoded is less than the string
-    in the current node, the next string compared will be the
-    one in root of the subtree containing all strings less than the
-    string in the current node.</p>
-
-    <p>If the string is length <em>m</em> and the dictionary is length
-    <em>n</em>, it turns out the worst case number of operations for finding a
-    match is still of the order O(<em>n</em> &times; <em>m</em>), but the
-    average case is O(log(<em>n</em>) &times; <em>m</em>).  The worst case
-    occurs when the binary search tree resembles a linked list and each
-    node only has one child.</p>
-
-    <p>Since the <a href="#dictionary">dictionary</a> is a sliding window of
-    the last characters encoded by the algorithm, the binary search tree
-    must be updated as old characters are removed from the dictionary and
-    new characters are added to the dictionary.
-    <a href="https://en.wikipedia.org/wiki/Binary_search_tree">Wikipedia</a>
-    provides a description of the algorithm used to insert or remove
-    entries from a binary search tree.
-
-    <p>The additional memory overhead required to implement a binary search
-    tree is one pointer to the root of the tree plus three pointers for each
-    symbol in the sliding window dictionary.  The pointers are for each
-    node's left child, right child, and parent.</p>
-
-    <p>The source code implementing a binary tree search is contained in the
-    file <code>tree.c</code>.  In my implementation, all pointers (left, right,
-    and parent) are all <code>unsigned int</code> indices into the sliding
-    window dictionary.</p>
-
-    <hr style="width:100%;">
-
-    <h2>C Library Code Interface</h2>
-    <div id="api">
-        <h3>Encoding Data</h3>
-        <h4>EncodeLZSS</h4>
-        <p class="section">Declaration:</p>
-        <p class="indent">
-            <code>int EncodeLZSS(FILE *fpIn, FILE *fpOut);</code>
-        </p>
-
-        <p class="section">Description:</p>
-        <p class="indent">
-            This function will read an input file and write an output
-            file encoded according to the traditional LZSS algorithm.
-            This algorithm encodes strings as 16 bits (a 12 bit offset
-            + a 4 bit length).
-        </p>
-
-        <p class="section">Parameters:</p>
-        <p class="indent">
-            <code>fpIn</code>
-            - The file stream to be encoded.  It must opened.  NULL pointers
-            will return an error.<br>
-            <code>fpOut</code>
-            - The file stream receiving the encoded results.  It must be opened.
-            NULL pointers will return an error.
-        </p>
-
-        <p class="section">Effects:</p>
-        <p class="indent">
-            <code>fpIn</code> is encoded and written to <code>fpOut</code>.
-            Neither file is closed after exit.
-        </p>
-
-        <p class="section">Returned:</p>
-        <p class="indent">
-            0 for success, -1 for failure.  <code>errno</code> will be set in
-            the event of a failure.
-        </p>
-
-        <h3>Decoding Data</h3>
-        <h4>DecodeLZSS</h4>
-        <p class="section">Declaration:</p>
-        <p class="indent">
-            <code>int DecodeLZSS(FILE *fpIn, FILE *fpOut);</code>
-        </p>
-
-        <p class="section">Description:</p>
-        <p class="indent">
-            This function will read an LZSS encoded input file and write
-            an output file.  This algorithm decodes strings from 16
-            bit code words (a 12 bit offset + a 4 bit length).
-        </p>
-
-        <p class="section">Parameters:</p>
-        <p class="indent">
-            <code>fpIn</code>
-            - The file stream to be decoded.  It must opened.  NULL pointers
-            will return an error.<br>
-            <code>fpOut</code>
-            - The file stream receiving the decoded results.  It must be opened.
-            NULL pointers will return an error.
-        </p>
-
-        <p class="section">Effects:</p>
-        <p class="indent">
-            <code>fpIn</code> is decoded and written to <code>fpOut</code>.
-            Neither file is closed after exit.
-        </p>
-
-        <p class="section">Returned:</p>
-        <p class="indent">
-            0 for success, -1 for failure.  <code>errno</code> will be set in
-            the event of a failure.
-        </p>
-    </div><!-- ends api-->
-
-    <hr style="width:100%;">
-
-    <a name="download"></a>
-    <h2>Actual Software</h2>
-    <p>I am releasing my implementations of the LZSS algorithm under the
-    <a href="https://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>.
-    If you've actually read this page to get all the way down here, you
-    already know that I have different implementations.  In general earlier
-    versions are simpler (maybe easier to follow) and later versions are easier
-    to use as libraries and better suited for projects taking advantage of the
-    LGPL.  In some cases later version add new new search methods or fix minor
-    bugs.  All versions of my source code is available on
-    <a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
-    the latest revision if you're not looking for something specific.</p>
-
-    <table summary="GitHub Repositories">
-      <tr>
-        <th valign="top" align="left">Repository Location</th>
-        <th valign="top" align="left">
-          <a href="https://github.com/michaeldipperstein/lzss">
-            https://github.com/michaeldipperstein/lzss
-          </a>
-        </th>
-      </tr>
-    </table>
-
-    <p>If you have any further questions or comments, you may contact me by
-    e-mail.  My e-mail address is:
-    <a href="mailto:mdipperstein@gmail.com">mdipperstein@gmail.com</a></p>
-
-</div><!-- ends main-->
-
-</div><!--container1-->
-</div><!--container2-->
-
-<p><a href="./index.html">Home</a><br>
-Last updated on <em>August 2, 2017</em></p>
+<a href="index.html">Home</a>
+<p>Last updated on <em>December 29, 2018</em></p>
 
 </body>
 </html>
