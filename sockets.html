@@ -51,6 +51,7 @@
 
 <div id="header">
     <h1>Berkeley Sockets Examples</h1>
+    <h2>TCP, UDP, and a Less Trivial Echo Server</h2>
     <h3>by Michael Dipperstein</h3>
 </div>
 
@@ -58,9 +59,11 @@
 
 <h2>About The Software</h2>
 <p>Sometime during my senior year in college (1989-90 (I know I'm old)) I
-need to write a client and server for an AT&amp;T 3B20 running BSD 4.3,
-using the man pages as a guide (I used to own the multi-volume hard copy).
-This is not that code.  That code survived on a 3.5&quot; floppy disk that
+needed to write a client and server for an AT&amp;T 3B20 running BSD 4.3.
+The World Wide Web wasn't yet world-wide, so my only guide was my personal
+multi-volume hard copy of the man pages.</p>
+
+<p>This is not that code.  That code survived on a 3.5&quot; floppy disk that
 followed me around for a few years, until I needed it, revised it, and
 copied that code to a hard drive.  That code is also not this code.</p>
 
@@ -69,60 +72,248 @@ remember how to do something or other with sockets and updating my samples
 to use the latest techniques.  Well, not quite.  Since trying to remember
 where I put the code was taking up so much time, decided to formalize it and
 put it in a location that's <a href="#download">easy to find</a>.  That code
-is this code.</p>
+is code that I will describe here.</p>
+
+<p>This isn't 1990 and there are tons of socket examples on the Wold Wide
+Web and there are even more copies of all of the man pages there.  Before
+describing my code, I'll provide brief descriptions of TCP and UDP as well as
+clients and servers here.  However, if that's not enough for you, just take
+advantage of your favorite search engine.</p>
 
 <hr style="width:100%;">
 
-<h2>Working with Sockets</h2>
-<p>This isn't 1990 and there are tons of socket examples on the Wold Wide
-Web (which didn't go public until 1991), but I still feel compelled to
-provide a brief outline on how to implement clients and servers.  I'm not
-going to discuss TCP vs. UDP, because I may be the only person that ever
-uses these notes, and I have yet to need to be reminded about the main
-differences between TCP and UDP.</p>
+<h2>TCP (Transmission Control Protocol)</h2>
 
-<h3>TCP Servers</h3>
+<p>TCP is a connection oriented, reliable, byte stream protocol.  So what does
+that mean?</p>
+
+<p>Byte stream protocol means that data is made available as a stream of bytes.
+Other byte streams include the Linux file system.  The smallest granularity of
+data in a byte stream is one byte, and though bytes may be written and read in
+groups, there is no guarantee that the receiver will receive the bytes in the
+same grouping that they were sent.</p>
+
+<p>e.g. A sender may send six bytes grouped [0x00, 0x01, 0x02],
+[0x03, 0x04, 0x05] and a receiver may receive the six bytes grouped
+[0x00, 0x01], [0x02, 0x03, 0x04, 0x05].</p>
+
+<p>In the case of TCP, being reliable means two things:</p>
 <ol>
-    <li>Create a TCP/IP socket with the <code>socket()</code> command.</li>
-    <li>Populate a <code>struct sockaddr_in</code> with information about
-    the allowable incoming addresses and port being used.</li>
-    <li>Use the <code>bind()</code> command to bind the socket to the
-    port specified in the <code>struct sockaddr_in</code> stucture.</li>
-    <li>Use the <code>listen()</code> command to listen for socket
-    connections.</li>
-    <li>Use the <code>accept()</code> command to accept incoming connections
-    on the socket.</li>
-    <li>Receive incoming data with the <code>recv()</code> command.</li>
-    <li>Transmit outgoing data with the <code>send()</code> command.</li>
-    <li>When you're done with the socket, close it using the
-    <code>close()</code> command.</li>
+    <li>If the receiver does not acknowledge the receipt of data, the sender
+    will resend it.</li>
+    <li>Even if the receiver receives data out of order, the data will be
+    delivered to the application in order.
+        <ul>
+          <li>The receiving protocol stack is required to track the sequence
+          numbers of the data packets that it received.</li>
+          <li>The receiving protocol stack will request a data packet be
+          retransmitted after some number of successor data packets have
+          arrived</li>
+          <li>The receiving protocol stack will refrain from delivering data to
+          as application until all data that was transmitted before it has been
+          delivered to the application.</li>
+        </ul>
+    </li>
 </ol>
 
-<h3>TCP Clients</h3>
+<p>Connection oriented means that server must listen for and accept a
+connection request from a client before data may be exchanged (more on this
+soon).  Once a connection is established a fixed data route is established
+between the client and the server; it lasts until either the client or the
+server closes its connected socket.</p>
+
+<p>Each end of a TCP connection is associated with an IP address and a port
+number.</p>
+
+<h3>TCP Clients and Servers</h3>
+<p>TCP clients and TCP servers must connect to each other before exchanging
+data.  A TCP client establishes a connection with one server port, a TCP server
+may accept connections from multiple clients on the same server port.</p>
+
+<h4>Establishing a Connection as a TCP Client</h4>
 <ol>
     <li>Populate a <code>struct addrinfo</code> with information about
-    the server that you want to connect to.</li>
+    the server that you want to connect to.  At minimum:
+    <ul>
+        <li><code>ai_family = AF_INET</code></li>
+        <li><code>ai_socktype = SOCK_STREAM</code></li>
+        <li><code>ai_protocol = IPPROTO_TCP</code></li>
+    </ul>
+    </li>
     <li>Use the <code>getaddrinfo()</code> command to get a linked list of
     potential Internet addresses matching your request.</li>
     <li>Create a socket with the <code>socket()</code> command on one of the
-    addresses returned by <code>getaddrinfo()</code>.</li>
-    <li>Use the <code>connect()</code> command to attempt to connect to the
-    server (host).
+    addresses returned by <code>getaddrinfo()</code>.
+        <ul>
+            <li>If the <code>socket()</code> returns with failure, go to
+            step 3, and try the next address in the linked list.</li>
+        </ul>
+    </li>
+    <li>Use the <code>connect()</code> command to connect the socket to the
+    server.
         <ul>
             <li>If the <code>connect()</code> returns with success, use
             <code>freeaddrinfo()</code> to free-up the memory that
             <code>getaddrinfo()</code> allocated.</li>
             <li>If the <code>connect()</code> returns with failure, go to
-            step 3, and try another address.</li>
+            step 3, and try the next address in the linked list.</li>
         </ul>
     </li>
-    <li>Receive incoming data with the <code>read()</code> command.</li>
-    <li>Transmit outgoing data with the <code>write()</code> command.</li>
-    <li>When you're done with the socket, close it using the
-    <code>close()</code> command.</li>
+    <li>The socket from step 3 will be used for all communication.</li>
 </ol>
 
-<h3>UDP Servers</h3>
+<h4>Exchanging Data</h4>
+<ul>
+    <li>Data from the server may be received with the <code>read()</code> or
+    <code>recv()</code> commands.</li>
+    <li>Data may be sent to the server with the <code>write()</code> or
+    <code>send()</code> commands.</li>
+    <li>Threads, the <code>select()</code> command, or the <code>poll()</code>
+    command may be used to perform other tasks while waiting to send or
+    receive data.</li>
+</ul>
+
+<h4>Closing the Connection</h4>
+<ul>
+    <li>When done exchanging data, use close <code>close()</code> command
+    on the socket to end the connection.</li>
+</ul>
+
+<hr style="width:60%;">
+
+<h4>Listening for Connections as a TCP Server</h4>
+<ol>
+    <li>Create a TCP/IP socket with the <code>socket()</code> command.</li>
+    <li>Populate a <code>struct sockaddr_in</code> with information about
+    the allowable incoming addresses and the port being used.</li>
+    <li>Use the <code>bind()</code> command to bind the socket to the
+    port specified in the <code>struct sockaddr_in</code> stucture.</li>
+    <li>Use the <code>listen()</code> command to cause the socket to listen for
+    incoming connections.</li>
+</ol>
+
+<h4>Accepting Connections as a TCP Servers</h4>
+<ol>
+    <li>Use the <code>accept()</code> command on the listening socket to accept
+    the incoming connections.
+    <ul>
+        <li><code>accept()</code> returns the descriptor for the socket that
+        to be used for exchanging data.</li>
+        <li>Additional calls to <code>accept()</code> may be used to establish
+        connections with other clients trying to connect.</li>
+    </ul>
+    </li>
+    <li>Threads, the <code>select()</code> command, or the <code>poll()</code>
+    command may be used to perform other tasks while waiting accept other
+    connections.</li>
+</ol>
+
+<h4>Exchanging Data</h4>
+<ul>
+    <li>Data from a client may be received with the <code>read()</code> or
+    <code>recv()</code> commands.</li>
+    <li>Data may be sent to a client with the <code>write()</code> or
+    <code>send()</code> command.</li>
+    <li>Threads, the <code>select()</code> command, or the <code>poll()</code>
+    command may be used to perform other tasks while waiting to send or
+    receive data.</li>
+</ul>
+
+<h4>Closing the Connection</h4>
+<ul>
+    <li>When done exchanging data with a client, use the <code>close()</code>
+    command on the socket to end the connection.</li>
+    <li>When done accepting connections witht new clients, use the
+    <code>close()</code> command on the listening socket.</li>
+</ul>
+
+<hr style="width:100%;">
+
+<h2>UDP (User Datagram Protocol)</h2>
+<p>UDP is a packet oriented, connectionless protocol.  So what does
+that mean?</p>
+
+<p>Data is sent and received in packets called datagrams.  Datagrams are just
+groups of bytes.  A receiver will receive data in the same byte grouping that
+the sender sent them.</p>
+
+<p>e.g. A sender may send six bytes grouped [0x00, 0x01, 0x02],
+[0x03, 0x04, 0x05] and if they are received, the receiver will only receive
+the six bytes group as [0x00, 0x01, 0x02], [0x03, 0x04, 0x05].  More on this
+later.</p>
+
+<p>Connectionless means that server does not listen for or accept connection
+requests from clients, and fixed routes are not established for packets.
+Two packets sent from a sender to the same receiver may take different routes
+and arrive out of order, and a packet sent from a sender is not guaranteed to be
+received by the receiver.</p>
+
+<p>e.g. The above mentioned packets of [0x00, 0x01, 0x02] and
+[0x03, 0x04, 0x05] may be received as:</p>
+<ul>
+    <li>[0x00, 0x01, 0x02] then [0x03, 0x04, 0x05]</li>
+    <li>[0x03, 0x04, 0x05] then [0x00, 0x01, 0x02]</li>
+    <li>only [0x00, 0x01, 0x02]</li>
+    <li>only [0x03, 0x04, 0x05]</li>
+    <li>nothing at all</li>
+</ul>
+
+<h3>UDP Clients and Servers</h3>
+<p>Since UDP is connectionless, there is no need for UDP clients and UDP servers
+to connect to each other before exchanging data.  The only thing a UDP client
+needs to do is open a socket for UDP communication with the server's address and
+port.  The client's socket may only be used to communicate with one server.
+A UDP server must bind a datagram socket to a local port for sending and
+receiving UDP messages to UDP clients.  The server may use the same socket for
+communicating with multiple servers.</p>
+
+<h4>Opening a Socket as a UDP Client</h4>
+<ol>
+    <li>Populate a <code>struct addrinfo</code> with information about
+    the server that you want to exchange datagrams with.  At minimum:
+    <ul>
+        <li><code>ai_family = AF_INET</code></li>
+        <li><code>ai_socktype = SOCK_DGRAM</code></li>
+        <li><code>ai_protocol = IPPROTO_UDP</code></li>
+    </ul>
+    </li>
+    <li>Use the <code>getaddrinfo()</code> command to get a linked list of
+    potential Internet addresses matching your request.</li>
+    <li>Create a socket with the <code>socket()</code> command on one of the
+    addresses returned by <code>getaddrinfo()</code>.
+        <ul>
+            <li>If the <code>socket()</code> returns with failure, go to
+            step 3, and try the next address in the linked list.</li>
+        </ul>
+    </li>
+    <li>Copy the server address from the <code>ai_addr</code> field of the
+    address that was used to create the socket.</li>
+    <li>Use <code>freeaddrinfo()</code> to free-up the memory that
+    <code>getaddrinfo()</code> allocated.</li>
+    <li>The socket from step 3 and address from step 4 will be used for all
+    communication.</li>
+</ol>
+
+<h4>Exchanging Data</h4>
+<ul>
+    <li>Data from the server may be received with the <code>recvfrom()</code>
+    command.</li>
+    <li>Data may be sent to the server with the <code>sendto()</code>
+    command.</li>
+    <li>Threads, the <code>select()</code> command, or the <code>poll()</code>
+    command may be used to perform other tasks while waiting to send or
+    receive data.</li>
+</ul>
+
+<h4>Closing the Connection</h4>
+<ul>
+    <li>When done exchanging data, use close <code>close()</code> command
+    on the socket to session.</li>
+</ul>
+
+<hr style="width:60%;">
+
+<h4>Opening a Socket as a UDP Servers</h4>
 <ol>
     <li>Create a UDP/IP socket with the <code>socket()</code> command.</li>
     <li>Populate a <code>struct sockaddr_in</code> with information about
@@ -135,37 +326,35 @@ differences between TCP and UDP.</p>
             </li>
         </ul>
     </li>
-    <li>Receive incoming data with the <code>recvfrom()</code> command.</li>
-    <li>Transmit outgoing data with the <code>sendto()</code> command.</li>
-    <li>When you're done with the socket, close it using the
-    <code>close()</code> command.</li>
 </ol>
 
-<h3>UDP Clients</h3>
-<ol>
-    <li>Populate a <code>struct addrinfo</code> with information about
-    the server that you want to connect to.</li>
-    <li>Use the <code>getaddrinfo()</code> command to get a linked list of
-    potential Internet addresses matching your request.</li>
-    <li>Create a socket with the <code>socket()</code> command on one of the
-    addresses returned by <code>getaddrinfo()</code>.
-        <ul>
-            <li>If the <code>socket()</code> returns with success, copy
-            the <code>struct sockaddr</code> that you used, then use
-            <code>freeaddrinfo()</code> to free-up the memory that
-            <code>getaddrinfo()</code> allocated.</li>
-            <li>If the <code>socket()</code> returns with failure, repeat
-            this step with the next address from the
-            <code>struct addrinfo</code> linked list.</li>
-        </ul>
-    </li>
-    <li>Receive incoming data with the <code>recvfrom()</code> command.</li>
-    <li>Transmit outgoing data with the <code>sendto()</code> command.</li>
-    <li>When you're done with the socket, close it using the
-    <code>close()</code> command.</li>
-</ol>
+<h4>Exchanging Data</h4>
+<ul>
+    <li>Data from the server may be received with the <code>recvfrom()</code>
+    command.</li>
+    <li>Data may be sent to the server with the <code>sendto()</code>
+    command.</li>
+    <li>Threads, the <code>select()</code> command, or the <code>poll()</code>
+    command may be used to perform other tasks while waiting to send or
+    receive data.</li>
+</ul>
 
-<h2>Using The Software</h2>
+<h4>Closing the Connection</h4>
+<ul>
+    <li>When done exchanging data, use close <code>close()</code> command
+    on the socket to session.</li>
+</ul>
+
+<hr style="width:100%;">
+
+<h2>Echo Examples</h2>
+<p>I have implemented slightly fancy echo examples demonstrating how everything
+comes together.  The examples are purely educational and should not be used
+as-is to implement a real world platform.  In the traditional echo example
+a echo server will send data received from a client back to that client.  The
+example code that I provide implements a server that will echo data received
+from a client to <em> all known clients</em>.</p>
+
 <h3>Building Executables from Source</h3>
 <p>To build these files with GNU make and gcc:</p>
 <ol>
@@ -234,7 +423,7 @@ e-mail.  My e-mail address is:
 mdipperstein@gmail.com</a></p>
 
 <p><a href="index.html">Home</a><br>
-Last updated on <em>January 3, 2019</em></p>
+Last updated on <em>September 10, 2020</em></p>
 
 </body>
 </html>
