@@ -313,7 +313,7 @@ communicating with multiple servers.</p>
 
 <hr style="width:60%;">
 
-<h4>Opening a Socket as a UDP Servers</h4>
+<h4>Opening a Socket as a UDP Server</h4>
 <ol>
     <li>Create a UDP/IP socket with the <code>socket()</code> command.</li>
     <li>Populate a <code>struct sockaddr_in</code> with information about
@@ -333,7 +333,14 @@ communicating with multiple servers.</p>
     <li>Data from the server may be received with the <code>recvfrom()</code>
     command.</li>
     <li>Data may be sent to the server with the <code>sendto()</code>
-    command.</li>
+    command.
+    <ul>
+        <li><strong>NOTE:</strong> <code>sendto()</code> requires a
+        <code>struct sockaddr</code> to send the datagram to.  That will likely
+        come from an earlier <code>recvfrom()</code>.  Meaning the client must
+        be the first to send data.</li>
+    </ul>
+    </li>
     <li>Threads, the <code>select()</code> command, or the <code>poll()</code>
     command may be used to perform other tasks while waiting to send or
     receive data.</li>
@@ -353,15 +360,20 @@ comes together.  The examples are purely educational and should not be used
 as-is to implement a real world platform.  In the traditional echo example
 a echo server will send data received from a client back to that client.  The
 example code that I provide implements a server that will echo data received
-from a client to <em> all known clients</em>.</p>
+from a client to <em>all known clients</em>.</p>
 
-<h3>Building Executables from Source</h3>
-<p>To build these files with GNU make and gcc:</p>
-<ol>
-    <li>Open a terminal</li>
-    <li>Change directory to the directory containing the source files</li>
-    <li>Enter the command <code>make</code> from the command line</li>
-</ol>
+<p>Any client communicating with a server is tracked by the file descriptor for
+the socket used to communicate with it.  The TCP server is made aware of a
+client disconnects by a receive event on the connected socket.  UDP is
+connectionless and there is no mechanism built in to the protocol to alert the
+server that the client is closing the socket used to communicate with it.  In my
+implementation the UDP client sends a 0 byte packet to the server prior to
+closing the socket.  The 0 byte message is something that I made up.  It is
+not part of the UDP protocol.</p>
+
+<p>The servers and clients require the ability to multitask.  I chose to
+implement multitasking with <code>poll()</code>; it blocks until an event occurs
+on any of the file descriptors it has been passed.</p>
 
 <h3>Running the Executables</h3>
 <p>All of my examples are console programs that may be executed from a
@@ -384,7 +396,16 @@ echoclient_udp &lt;server address&gt; &lt;port number&gt;</code></p>
 <p>Hit <code>Enter</code> on a blank line to exit from an
 <code>echoclient</code>.<br>
 Multiple <code>echoclient</code>s may connect to a single
-<code>echoserver</code> instance.</p>
+<code>echoserver</code> instance.  A message sent from any
+<code>echoclient</code> will be echoed to all <code>echoclient</code>s.</p>
+
+<h3>Building Executables from Source</h3>
+<p>To build these files with GNU make and gcc:</p>
+<ol>
+    <li>Open a terminal</li>
+    <li>Change directory to the directory containing the source files</li>
+    <li>Enter the command <code>make</code> from the command line</li>
+</ol>
 
 <hr style="width:100%;">
 
@@ -413,9 +434,9 @@ for something specific.</p>
 
 <h3>Portability</h3>
 <p>All the source code that I have provided is written in strict ANSI C.
-It requires Berkeley Sockets, so it can't be built on MS Windows platforms
-without serious work, but I expect it to build and run on most POSIX
-compliant operating systems.</p>
+However, it requires Berkeley Sockets, poll, and signalfd.  So it is only
+likely to work on Linux systems; it may be re-written without signalfd for
+all POSIX compliant systems, including BSD.</p>
 
 <p>If you have any further questions or comments, you may contact me by
 e-mail.  My e-mail address is:
@@ -423,7 +444,7 @@ e-mail.  My e-mail address is:
 mdipperstein@gmail.com</a></p>
 
 <p><a href="index.html">Home</a><br>
-Last updated on <em>September 10, 2020</em></p>
+Last updated on <em>September 13, 2020</em></p>
 
 </body>
 </html>
