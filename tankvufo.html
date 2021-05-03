@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Tank-V-UFO Tribute</title>
+<meta charset="UTF-8">
+<meta name="author" content="Michael Dipperstein">
+<meta name="keywords" content="Tank-V-UFO ncurses commodore VIC-20 game">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="newlook.css" type="text/css">
+</head>
+<body>
+
+<div class="navbar">
+    <a href="./index.html">Home</a>
+
+    <div class="dropdown">
+        <button class="dropbutton">Compression</button>
+        <div class="dropdown-items">
+            <a href="./arithmetic.html">Arithmetic Coding</a>
+            <a href="./bwt.html">Burrows-Wheeler Transform</a>
+            <a href="./delta.html">Delta Coding</a>
+            <a href="./freq.html">Frequency Substitution</a>
+            <a href="./huffman.html">Huffman Coding</a>
+            <a href="./lzss.html">LZSS Coding</a>
+            <a href="./lzw.html">LZW Coding</a>
+            <a href="./rice.html">Rice (Golomb) Coding</a>
+            <a href="./rle.html">Run Length Encoding</a>
+        </div>
+    </div>
+
+    <div class="dropdown">
+        <button class="dropbutton">Misc. Programming</button>
+        <div class="dropdown-items">
+            <a href="./projects.html">School Projects</a>
+            <a href="./mltp.html">Thesis Project</a>
+            <a href="./crypt.html">crypt(3) Source</a>
+            <a href="./hamming.html">Hamming Codes</a>
+            <a href="./bitarray.html">Bit Array Libraries</a>
+            <a href="./bitfile.html">Bit File Stream Libraries</a>
+            <a href="./sqrt.html">Square Root Approximation Library</a>
+            <a href="./sort.html">Sort Library</a>
+            <a href="./trim.html">Trailing Space Trimmer and Tab Remover</a>
+            <a href="./optlist.html">Command Line Option Parser</a>
+            <a href="./stopwatch.html">POSIX Stopwatch Library</a>
+            <a href="./keypress.html">POSIX Wait for Key Press</a>
+            <a href="./ezini.html">INI File Parser and Creator</a>
+            <a href="./sockets.html">Berkeley Sockets Examples</a>
+            <a href="./tankvufo.html">ncurses Tank-V-UFO Tribute</a>
+        </div>
+    </div>
+</div><!-- ends navbar-->
+
+<div id="header">
+    <h1>A Tribute to Tank-V-UFO,</h1>
+    <h1>a Commodore VIC-20 Game by Duane Later</h1>
+    <h3>by Michael Dipperstein</h3>
+
+</div>
+
+<hr style="width:100%;">
+
+<h2>About This Software</h2>
+
+<p>I got to use my first computer in 1980.  It was a
+<a href="https://en.wikipedia.org/wiki/TRS-80">TSR-80 Model I</a>, and
+responsible for me wanting a computer of my own, but Radio Shack sold TRS-80
+Model I setups for about $600.00, which was way too expensive for me.
+About a year later, I saw my first
+<a href="https://en.wikipedia.org/wiki/Commodore_VIC-20">Commodore VIC-20</a>.
+The VIC-20 retailed for $300, and could be purchased for about 20% off at the
+local discount eletronic store.  Saving all of my gift money that year, I bought
+a VIC-20.</p>
+
+<p>The only software that came with the VIC-20 was a version of Microsoft BASIC
+in it's ROM.  Any other VIC-20 software had to be typed in and saved to a
+cassette tape (If you don't know what a cassette tape is, you'll have to look it
+up yourself).  Fortunately the VIC-20 came with a book, <em>&quot;Personal
+Computing on the VIC-20 A Friendly Computer Guide&quot;</em>.  That book
+included source code for a game written by Duane Later, Tank-V-UFO.  My mom
+helped me type in that source from the book, and after debugging the typos, I
+had a working copy of a game that I must have played for hundreds of hours.  It
+wasn't good enough to play the game as-is, I had some tweaked versions that I
+played too.</p>
+
+<p>This Tank-V-UFO, is not the original VIC-20 version, but it was definitely
+inspired by the original.  The game play is similar to that of the original,
+where &quot;similar&quot; is based on my memory and YouTube videos.  The source
+code for this game is not derived from the VIC-20 source code.  It is written in
+C and relies heavily upon the
+<a href="https://invisible-island.net/ncurses/">ncursesw</a> and
+<a href="http://www.portaudio.com/">portaudio</a> libraries.</p>
+
+<div style="text-align:center;">
+    <iframe
+        style="border: 0;"
+        width="560" height="315"
+        src="https://www.youtube-nocookie.com/embed/zHDfCM_iNPk"
+        title="YouTube video player"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media;
+            gyroscope; picture-in-picture"
+        allowfullscreen>
+    </iframe>
+    <p>Original VIC-20 Game</p>
+</div>
+
+<div style="text-align:center;">
+    <video width="656" height="450" controls>
+        <source src="img/tankvufo.mp4" type="video/mp4">
+        Video Not Supported
+    </video>
+    <p>My ncurses Version</p>
+</div>
+
+<p>If you just want my source code, click <a href="#download">here</a> for
+information on downloading it.</p>
+
+<p>The rest of this page discusses some of what went in to writing the software
+and how to build an executable from the source.</p>
+
+<hr style="width:100%;">
+
+<h2>Design Decisions</h2>
+<p>First and foremost, I wanted to make something that felt like playing
+the original, but wasn't necessarily and exact duplicate.  To me that meant
+keyboard controls and character based animation.  Character based animation
+is way easier with <a href="https://invisible-island.net/ncurses/">ncurses</a>,
+so using ncurses seemed like a no brainer to me.  No brainer decisions are
+about the only kind of decision that I can make.</p>
+
+<p>For keyboard controls, I used the &quot;Z-LEFT,C-RIGHT,B-FIRE&quot; of the
+original game.  From what I can tell, the original game ended when the first
+one scored 15 kills.  My attention span seems shorter than it used to be, so my
+game ends when Q is pressed.  If you don't press Q, the game won't end.</p>
+
+<p>The VIC-20 connected to a TV and volume control was the TV's volume control.
+The + and &minus; keys adjust the volume on my version.</p>
+
+<p>The VIC-20 had a pretty unique character set.  Many of the characters used
+in the original game aren't part of the ASCII character set.  Rather than using
+bitmaps to replicate the VIC-20 characters, I decide to use Unicode symbols
+that looked close enough to me.  To access the Unicode character set, I had to
+use the wide version of ncurses, ncursesw.</p>
+
+<p>The VIC-20 display is only 22 columns wide, playing the game using the full
+80 columns of a typical terminal emulator feels way different.  There's too much
+waiting for the UFO to get back in place.  So the playing field for my version
+is 23 rows and 22 columns, just like the VIC-20 display.</p>
+
+<p>The real game seems to change colors all the time.  I couldn't figure how it
+worked, so I chose a set of colors that were easy on my eyes and stuck with
+them.  You might notice the similarity to this web page.</p>
+
+<p>I'm pretty sure that the original game just used basic loops for timing.  All
+of the VIC-20s have the same CPU running at the same speed, so loops on one
+VIC-20 take the same amount of time as loops on all other VIC-20s.  The same
+doesn't hold true for modern PCs, so I <code>poll()</code> on a
+<code>timerfd</code> for my timing.  I tried a bunch of different timing
+intervals and 200ms seemed about right.</p>
+
+<p>I have no clue how the UFO decides when to fire in the original game.  If a
+UFO shot isn't currently falling, and the UFO can shoot without it going off
+screen, I give it a 1:3 chance of shooting.  I tried a few values and decided
+that was good enough.</p>
+
+<p>It seems like there are times in the original game where one movement is
+stopped in order to produce an animation effect or a sound effect.  I didn't
+want to duplicate that.  I always use the same movement sequence: UFO, tank,
+UFO shot, tank shot.  Because of that some things, like explosions aren't
+quite the same.</p>
+
+<p>The VIC-20 also had it's own tone generator and white noise generator for
+sound effects.  Having the exact same sounds weren't important to me, so I used
+the <a href="https://www.leshylabs.com/apps/sfMaker/">sfMaker</a> website to
+get something good enough.  If exact sounds are important to you, you can always
+sample one of the YouTube videos of the game.  Though be forewarned that the
+videos don't all sound the same.</p>
+
+<p>Oh, then there's the fact that I wrote everything in C, because that's just
+what I started with.  Looking at where I ended up, C++ might have been a better
+choice, but it's too late now.</p>
+
+<p>I'm sure there are other decisions that I left out.  If you feel like finding
+out why I made those decisions, you can e-mail me at
+<a href="mailto:mdipperstein@gmail.com">mdipperstein@gmail.com</a> and ask what
+I was thinking.  If you're lucky I might remember.  Of course, you're free to
+do whatever you want with my code as long as you don't violate the GPL.</p>
+
+<hr style="width:100%;">
+
+<h2>Building The Software</h2>
+
+<p>It should be possible to build this software with Visual Studio, XCode, or
+just about any other IDE if you have an ANSI C compiler, the required libraries,
+and your OS supports <code>timerfd</code>s and <code>poll</code>.  As far as I
+know, that means you're on Linux or something like
+<a href="https://www.cygwin.com/">Cygwin</a>.  I'm old fashioned and used a
+command line and the GNU Tools to build my code.</p>
+
+<p>To build these files with GNU <code>make</code>, <code>gcc</code>, and
+<code>pkg-config</code>:</p>
+<ol>
+    <li><a href="#download">Download</a> the source code</li>
+    <li>Open a terminal</li>
+    <li>Change directory to the directory containing the downloaded source</li>
+    <li>Enter the command <code>make</code> from the command line</li>
+</ol>
+
+<p><strong>**NOTE:**</strong> The
+<a href="https://invisible-island.net/ncurses/">ncursesw</a> library and the
+the <a href="http://www.portaudio.com/">portaudio</a> library are required to
+build this code.  <code>pkg-config</code> must be configured for both libraries.
+</p>
+
+<p>That's all there is.</p>
+
+<hr style="width:100%;">
+
+<h2 id="download">Actual Software</h2>
+<p>This is probably the only part of this web page that anyone would care about.
+I am releasing my Tank-V-UFO Tribute under version 3 of the
+<a href="https://www.gnu.org/licenses/licenses.html#GPL">GPL</a>.
+The source code repository is available on
+<a href="https://www.github.com">GitHub</a>.  I recommend that you checkout
+the latest revision of the master branch, unless you're looking for
+something specific.</p>
+
+<table class="repotable">
+  <tr>
+    <th>Repository Location</th>
+    <th>
+      <a href="https://github.com/michaeldipperstein/tankvufo">
+        https://github.com/michaeldipperstein/tankvufo
+      </a>
+    </th>
+  </tr>
+</table>
+
+<hr style="width:100%;">
+
+<p><a href="index.html">Home</a><br>
+Last updated on <em>April 21, 2021</em></p>
+
+</body>
+</html>
